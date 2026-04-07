@@ -14,23 +14,49 @@ Together, they provide a complete picture of a project's preprocessor landscape:
 ## Directory Structure
 
 ```
-macrust/
+kiso-parser-macro/
 ├── macro_finder/
 │   ├── CMakeLists.txt
 │   ├── build.sh
 │   └── macro_finder.cpp
-└── macro_analyzer/
-    ├── CMakeLists.txt
-    ├── build.sh
-    └── macro_analyzer.cpp
+├── macro_analyzer/
+│   ├── CMakeLists.txt
+│   ├── build.sh
+│   └── macro_analyzer.cpp
+├── llvm-project/
+├── llvm-custom/
+├── clang-modifications.patch
+├── download_clang.sh
+└── README.md
 ```
 
 ## Requirements
 
+- Ubuntu (tested on Ubuntu 22.04+)
 - LLVM/Clang 19 development libraries (`libclang-19-dev` or equivalent)
 - CMake 3.16+
 - C++17 compiler
-- Linux (tested on Ubuntu with x86_64)
+- Python 3.10+ (for API server usage)
+
+
+## Setup: Build LLVM/Clang
+
+```bash
+# Download LLVM source
+./download_clang.sh
+
+# Apply custom patch
+cd llvm-project
+git apply ../clang-modifications.patch
+
+# Build
+cmake -S llvm -B build -G Ninja \
+  -DLLVM_ENABLE_PROJECTS=clang \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=../llvm-custom
+cmake --build build
+cmake --install build
+```
 
 ## Building
 
@@ -38,11 +64,11 @@ Each tool is built independently:
 
 ```bash
 # macro_finder
-cd macrust/macro_finder
+cd kiso-parser-macro/macro_finder
 ./build.sh
 
 # macro_analyzer
-cd macrust/macro_analyzer
+cd kiso-parser-macro/macro_analyzer
 ./build.sh
 
 ```
