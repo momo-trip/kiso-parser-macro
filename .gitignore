@@ -1,0 +1,6 @@
+llvm-project/
+llvm-custom/
+macro_finder*/build/
+macro_analyzer*/build/
+macro_finder*/metadata/
+macro_finder*/output.json

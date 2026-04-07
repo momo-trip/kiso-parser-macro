@@ -10,6 +10,8 @@ A suite of Clang-based static analysis tools for extracting and analyzing C prep
 
 Together, they provide a complete picture of a project's preprocessor landscape: what macros are defined, what they reference, and how conditional compilation branches are evaluated.
 
+**Note**: This tool is under active development. Commented-out code is intentionally retained as part of ongoing experimentation across diverse C codebases. It will be cleaned up as the tool matures.
+
 
 ## Directory Structure
 
