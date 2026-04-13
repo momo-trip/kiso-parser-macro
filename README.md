@@ -44,20 +44,8 @@ kiso-parser-macro/
 ## Setup: Build LLVM/Clang
 
 ```bash
-# Download LLVM source
+# Download LLVM source and apply custom patch
 ./download_clang.sh
-
-# Apply custom patch
-cd llvm-project
-git apply ../clang-modifications.patch
-
-# Build
-cmake -S llvm -B build -G Ninja \
-  -DLLVM_ENABLE_PROJECTS=clang \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=../llvm-custom
-cmake --build build
-cmake --install build
 ```
 
 ## Building

@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.13)
 project(MacroFinder)
 
 # Use custom-built version
-set(CMAKE_PREFIX_PATH "/home/ubuntu/macrust/llvm-custom")
-set(LLVM_DIR "/home/ubuntu/macrust/llvm-custom/lib/cmake/llvm")
-set(Clang_DIR "/home/ubuntu/macrust/llvm-custom/lib/cmake/clang")
+set(CMAKE_PREFIX_PATH "/root/kiso-parser-macro/llvm-custom")
+set(LLVM_DIR "/root/kiso-parser-macro/llvm-custom/lib/cmake/llvm")
+set(Clang_DIR "/root/kiso-parser-macro/llvm-custom/lib/cmake/clang")
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(Clang REQUIRED CONFIG)
