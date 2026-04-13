@@ -1404,7 +1404,7 @@ static cl::OptionCategory MyToolCategory("macro-finder options");
 // Unified include path addition (C/C++ switching)
 static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
   // Specify Clang's resource directory
-  //"-resource-dir=/home/ubuntu/macrust/llvm-custom/lib/clang/19",
+  //"-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
   "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
   // Disable all warnings
   "-w",
@@ -1415,7 +1415,7 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
   //"-Wno-everything",
   
   // Prioritize Clang's built-in headers
-  //"-isystem/home/ubuntu/macrust/llvm-custom/lib/clang/19/include",
+  //"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
   // ★★★ Add OpenMP headers ★★★
   //"-isystem/usr/lib/llvm-14/lib/clang/14.0.0/include",
   //"-isystem/usr/lib/llvm-19/lib/clang/19/include",
@@ -1548,12 +1548,12 @@ int main(int argc, const char **argv) {
 //   // Add include paths for custom-built Clang
 //   // Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
 //   //   {// Specify Clang's resource directory
-//   //   //"-resource-dir=/home/ubuntu/macrust/llvm-custom/lib/clang/19",
+//   //   //"-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
 //   //   "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
 //   //   // Disable all warnings
 //   //   "-w",
 //   //   // Prioritize Clang's built-in headers
-//   //   //"-isystem/home/ubuntu/macrust/llvm-custom/lib/clang/19/include",
+//   //   //"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //   //   // ★★★ Add OpenMP headers ★★★
 //   //   //"-isystem/usr/lib/llvm-14/lib/clang/14.0.0/include",
 //   //   "-isystem/usr/lib/llvm-19/lib/clang/19/include",
@@ -1603,7 +1603,7 @@ int main(int argc, const char **argv) {
 
 
 // Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
-//   {"-isystem/home/ubuntu/macrust/llvm-custom/lib/clang/19/include",
+//   {"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //    "-isystem/usr/include",
 //    "-isystem/usr/include/x86_64-linux-gnu",
 //   "-isystem/usr/lib/gcc/x86_64-linux-gnu/11/include"},

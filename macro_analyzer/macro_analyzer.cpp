@@ -772,7 +772,7 @@ static llvm::cl::OptionCategory MyToolCategory("macro-analyzer options");
 // === Define include paths in one place ===
 static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
     // Specify Clang resource directory
-    //"-resource-dir=/home/ubuntu/macrust/llvm-custom/lib/clang/19",
+    //"-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
     "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
     // Disable all warnings
     "-w",
@@ -783,7 +783,7 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
     //"-Wno-everything",
     
     // Prioritize Clang built-in headers
-    //"-isystem/home/ubuntu/macrust/llvm-custom/lib/clang/19/include",
+    //"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
     // ★★★ Add OpenMP headers ★★★
     //"-isystem/usr/lib/llvm-14/lib/clang/14.0.0/include",
     //"-isystem/usr/lib/llvm-19/lib/clang/19/include",
@@ -804,9 +804,9 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
 
 
 // static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
-//     "-resource-dir=/home/ubuntu/macrust/llvm-custom/lib/clang/19",
+//     "-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
 //     "-w",
-//     "-isystem/home/ubuntu/macrust/llvm-custom/lib/clang/19/include",
+//     "-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //     "-isystem/usr/include/c++/11",
 //     "-isystem/usr/include/x86_64-linux-gnu/c++/11",
 //     "-isystem/usr/include/c++/11/backward",
@@ -825,7 +825,7 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
 // };
 
 // static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
-//     "-isystem/home/ubuntu/macrust/llvm-custom/lib/clang/19/include",
+//     "-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //     "-isystem/usr/include",
 //     "-isystem/usr/include/x86_64-linux-gnu",
 //     "-isystem/usr/lib/gcc/x86_64-linux-gnu/11/include",
