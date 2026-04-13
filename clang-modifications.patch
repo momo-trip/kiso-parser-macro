@@ -1,0 +1,1393 @@
+diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
+index 46cc56408..23f30a276 100644
+--- a/clang/include/clang/Lex/PPCallbacks.h
++++ b/clang/include/clang/Lex/PPCallbacks.h
+@@ -345,6 +345,15 @@ public:
+                             const MacroDirective *MD) {
+   }
+ 
++  // added
++  /// Hook called when a macro definition is encountered in a skipped block.
++  virtual void SkippedMacroDefined(const Token &MacroNameTok) {
++  }
++
++  virtual void SkippedMacroUndefined(const Token &MacroNameTok) {
++  }
++  // ended
++
+   /// Hook called whenever a macro \#undef is seen.
+   /// \param MacroNameTok The active Token
+   /// \param MD A MacroDefinition for the named macro.
+@@ -391,20 +400,37 @@ public:
+   /// \param ConditionValue The evaluated value of the condition.
+   ///
+   // FIXME: better to pass in a list (or tree!) of Tokens.
++  // added
++  // virtual void If(SourceLocation Loc, SourceRange ConditionRange,
++  //                 ConditionValueKind ConditionValue) {
++  // }
+   virtual void If(SourceLocation Loc, SourceRange ConditionRange,
+-                  ConditionValueKind ConditionValue) {
+-  }
++    ConditionValueKind ConditionValue,
++    ArrayRef<Token> UnexpandedTokens) {}
++
++  virtual void SkippedIf(SourceLocation Loc, SourceRange ConditionRange,
++    ArrayRef<Token> UnexpandedTokens) {}
++  // ended
+ 
+   /// Hook called whenever an \#elif is seen.
+   /// \param Loc the source location of the directive.
+   /// \param ConditionRange The SourceRange of the expression being tested.
+   /// \param ConditionValue The evaluated value of the condition.
+   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
++  // added
+   // FIXME: better to pass in a list (or tree!) of Tokens.
++  // virtual void Elif(SourceLocation Loc, SourceRange ConditionRange,
++  //                   ConditionValueKind ConditionValue, SourceLocation IfLoc) {
++  // }
+   virtual void Elif(SourceLocation Loc, SourceRange ConditionRange,
+-                    ConditionValueKind ConditionValue, SourceLocation IfLoc) {
++                    ConditionValueKind ConditionValue, SourceLocation IfLoc, 
++                    ArrayRef<Token> UnexpandedTokens) {
+   }
+ 
++  virtual void SkippedElif(SourceLocation Loc, SourceRange ConditionRange, 
++    SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) {}
++  // ended
++
+   /// Hook called whenever an \#ifdef is seen.
+   /// \param Loc the source location of the directive.
+   /// \param MacroNameTok Information on the token being tested.
+@@ -412,13 +438,18 @@ public:
+   virtual void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+                      const MacroDefinition &MD) {
+   }
++  // added
++  virtual void SkippedIfdef(SourceLocation Loc, const Token &MacroNameTok) {
++  }
++  // ended
+ 
+   /// Hook called whenever an \#elifdef branch is taken.
+   /// \param Loc the source location of the directive.
+   /// \param MacroNameTok Information on the token being tested.
+   /// \param MD The MacroDefinition if the name was a macro, null otherwise.
++  // added
+   virtual void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+-                       const MacroDefinition &MD) {
++                       const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) {
+   }
+   /// Hook called whenever an \#elifdef is skipped.
+   /// \param Loc the source location of the directive.
+@@ -426,8 +457,9 @@ public:
+   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
+   // FIXME: better to pass in a list (or tree!) of Tokens.
+   virtual void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
+-                       SourceLocation IfLoc) {
++                       SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) {
+   }
++  // ended
+ 
+   /// Hook called whenever an \#ifndef is seen.
+   /// \param Loc the source location of the directive.
+@@ -437,12 +469,18 @@ public:
+                       const MacroDefinition &MD) {
+   }
+ 
++  // added
++  virtual void SkippedIfndef(SourceLocation Loc, const Token &MacroNameTok) {
++  }
++  // ended
++
+   /// Hook called whenever an \#elifndef branch is taken.
+   /// \param Loc the source location of the directive.
+   /// \param MacroNameTok Information on the token being tested.
+   /// \param MD The MacroDefinition if the name was a macro, null otherwise.
++  // added
+   virtual void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+-                        const MacroDefinition &MD) {
++                        const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) {
+   }
+   /// Hook called whenever an \#elifndef is skipped.
+   /// \param Loc the source location of the directive.
+@@ -450,8 +488,9 @@ public:
+   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
+   // FIXME: better to pass in a list (or tree!) of Tokens.
+   virtual void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
+-                        SourceLocation IfLoc) {
++                        SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) {
+   }
++  // ended
+ 
+   /// Hook called whenever an \#else is seen.
+   /// \param Loc the source location of the directive.
+@@ -459,11 +498,21 @@ public:
+   virtual void Else(SourceLocation Loc, SourceLocation IfLoc) {
+   }
+ 
++  // added
++  /// Hook called whenever an \#else is skipped.
++  virtual void SkippedElse(SourceLocation Loc, SourceLocation IfLoc) {
++  }
++  // ended
++
+   /// Hook called whenever an \#endif is seen.
+   /// \param Loc the source location of the directive.
+   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
+   virtual void Endif(SourceLocation Loc, SourceLocation IfLoc) {
+   }
++
++  // added
++  virtual void SkippedEndif(SourceLocation Loc, SourceLocation IfLoc) {}
++  // ended
+ };
+ 
+ /// Simple wrapper class for chaining callbacks.
+@@ -677,6 +726,18 @@ public:
+     Second->MacroDefined(MacroNameTok, MD);
+   }
+ 
++  // added
++  void SkippedMacroDefined(const Token &MacroNameTok) override {
++    First->SkippedMacroDefined(MacroNameTok);
++    Second->SkippedMacroDefined(MacroNameTok);
++  }
++
++  void SkippedMacroUndefined(const Token &MacroNameTok) override {
++    First->SkippedMacroUndefined(MacroNameTok);
++    Second->SkippedMacroUndefined(MacroNameTok);
++  }
++  // ended
++
+   void MacroUndefined(const Token &MacroNameTok,
+                       const MacroDefinition &MD,
+                       const MacroDirective *Undef) override {
+@@ -695,20 +756,34 @@ public:
+     Second->SourceRangeSkipped(Range, EndifLoc);
+   }
+ 
++  // added
+   /// Hook called whenever an \#if is seen.
+   void If(SourceLocation Loc, SourceRange ConditionRange,
+-          ConditionValueKind ConditionValue) override {
+-    First->If(Loc, ConditionRange, ConditionValue);
+-    Second->If(Loc, ConditionRange, ConditionValue);
++          ConditionValueKind ConditionValue, ArrayRef<Token> UnexpandedTokens) override {
++    First->If(Loc, ConditionRange, ConditionValue, UnexpandedTokens);
++    Second->If(Loc, ConditionRange, ConditionValue, UnexpandedTokens);
++  }
++
++  void SkippedIf(SourceLocation Loc, SourceRange ConditionRange,
++        ArrayRef<Token> UnexpandedTokens) override {
++    First->SkippedIf(Loc, ConditionRange, UnexpandedTokens);
++    Second->SkippedIf(Loc, ConditionRange, UnexpandedTokens);
+   }
+ 
+   /// Hook called whenever an \#elif is seen.
+   void Elif(SourceLocation Loc, SourceRange ConditionRange,
+-            ConditionValueKind ConditionValue, SourceLocation IfLoc) override {
+-    First->Elif(Loc, ConditionRange, ConditionValue, IfLoc);
+-    Second->Elif(Loc, ConditionRange, ConditionValue, IfLoc);
++            ConditionValueKind ConditionValue, SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override {
++    First->Elif(Loc, ConditionRange, ConditionValue, IfLoc, UnexpandedTokens);
++    Second->Elif(Loc, ConditionRange, ConditionValue, IfLoc, UnexpandedTokens);
+   }
+ 
++  void SkippedElif(SourceLocation Loc, SourceRange ConditionRange, 
++        SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override {
++    First->SkippedElif(Loc, ConditionRange, IfLoc, UnexpandedTokens);
++    Second->SkippedElif(Loc, ConditionRange, IfLoc, UnexpandedTokens);
++  }
++  //ended
++
+   /// Hook called whenever an \#ifdef is seen.
+   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override {
+@@ -716,18 +791,27 @@ public:
+     Second->Ifdef(Loc, MacroNameTok, MD);
+   }
+ 
++  // added
++  void SkippedIfdef(SourceLocation Loc, const Token &MacroNameTok) override {
++    First->SkippedIfdef(Loc, MacroNameTok);
++    Second->SkippedIfdef(Loc, MacroNameTok);
++  }
++  // ended
++
++  // added
+   /// Hook called whenever an \#elifdef is taken.
+   void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+-               const MacroDefinition &MD) override {
+-    First->Elifdef(Loc, MacroNameTok, MD);
+-    Second->Elifdef(Loc, MacroNameTok, MD);
++               const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override {
++    First->Elifdef(Loc, MacroNameTok, MD, UnexpandedTokens);
++    Second->Elifdef(Loc, MacroNameTok, MD, UnexpandedTokens);
+   }
+   /// Hook called whenever an \#elifdef is skipped.
+   void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
+-               SourceLocation IfLoc) override {
+-    First->Elifdef(Loc, ConditionRange, IfLoc);
+-    Second->Elifdef(Loc, ConditionRange, IfLoc);
++               SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override {
++    First->Elifdef(Loc, ConditionRange, IfLoc, UnexpandedTokens);
++    Second->Elifdef(Loc, ConditionRange, IfLoc, UnexpandedTokens);
+   }
++  // ended
+ 
+   /// Hook called whenever an \#ifndef is seen.
+   void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+@@ -736,18 +820,27 @@ public:
+     Second->Ifndef(Loc, MacroNameTok, MD);
+   }
+ 
++  // added
++  void SkippedIfndef(SourceLocation Loc, const Token &MacroNameTok) override {
++    First->SkippedIfndef(Loc, MacroNameTok);
++    Second->SkippedIfndef(Loc, MacroNameTok);
++  }
++  // ended
++
++  // added
+   /// Hook called whenever an \#elifndef is taken.
+   void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+-                const MacroDefinition &MD) override {
+-    First->Elifndef(Loc, MacroNameTok, MD);
+-    Second->Elifndef(Loc, MacroNameTok, MD);
++                const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override {
++    First->Elifndef(Loc, MacroNameTok, MD, UnexpandedTokens);
++    Second->Elifndef(Loc, MacroNameTok, MD, UnexpandedTokens);
+   }
+   /// Hook called whenever an \#elifndef is skipped.
+   void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
+-               SourceLocation IfLoc) override {
+-    First->Elifndef(Loc, ConditionRange, IfLoc);
+-    Second->Elifndef(Loc, ConditionRange, IfLoc);
++               SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override {
++    First->Elifndef(Loc, ConditionRange, IfLoc, UnexpandedTokens);
++    Second->Elifndef(Loc, ConditionRange, IfLoc, UnexpandedTokens);
+   }
++  // ended
+ 
+   /// Hook called whenever an \#else is seen.
+   void Else(SourceLocation Loc, SourceLocation IfLoc) override {
+@@ -755,11 +848,25 @@ public:
+     Second->Else(Loc, IfLoc);
+   }
+ 
++  // added
++  void SkippedElse(SourceLocation Loc, SourceLocation IfLoc) override {
++    First->SkippedElse(Loc, IfLoc);
++    Second->SkippedElse(Loc, IfLoc);
++  }
++  // ended
++
+   /// Hook called whenever an \#endif is seen.
+   void Endif(SourceLocation Loc, SourceLocation IfLoc) override {
+     First->Endif(Loc, IfLoc);
+     Second->Endif(Loc, IfLoc);
+   }
++
++  // added
++  void SkippedEndif(SourceLocation Loc, SourceLocation IfLoc) override {
++    First->SkippedEndif(Loc, IfLoc);
++    Second->SkippedEndif(Loc, IfLoc);
++  }
++  // ended
+ };
+ 
+ }  // end namespace clang
+diff --git a/clang/include/clang/Lex/PPConditionalDirectiveRecord.h b/clang/include/clang/Lex/PPConditionalDirectiveRecord.h
+index d8c556ae2..5c001f82d 100644
+--- a/clang/include/clang/Lex/PPConditionalDirectiveRecord.h
++++ b/clang/include/clang/Lex/PPConditionalDirectiveRecord.h
+@@ -84,26 +84,28 @@ public:
+ 
+   SourceLocation findConditionalDirectiveRegionLoc(SourceLocation Loc) const;
+ 
++//added
+ private:
+   void If(SourceLocation Loc, SourceRange ConditionRange,
+-          ConditionValueKind ConditionValue) override;
++          ConditionValueKind ConditionValue, ArrayRef<Token> UnexpandedTokens) override;
+   void Elif(SourceLocation Loc, SourceRange ConditionRange,
+-            ConditionValueKind ConditionValue, SourceLocation IfLoc) override;
++            ConditionValueKind ConditionValue, SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override;
+   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override;
+   void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) override;
+   void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+-               const MacroDefinition &MD) override;
++               const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override;
+   void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
+-               SourceLocation IfLoc) override;
++               SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override;
+   void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+-                const MacroDefinition &MD) override;
++                const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override;
+   void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
+-                SourceLocation IfLoc) override;
++                SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override;
+   void Else(SourceLocation Loc, SourceLocation IfLoc) override;
+   void Endif(SourceLocation Loc, SourceLocation IfLoc) override;
+ };
++//ended
+ 
+ } // end namespace clang
+ 
+diff --git a/clang/include/clang/Lex/PreprocessingRecord.h b/clang/include/clang/Lex/PreprocessingRecord.h
+index 437d8e4cc..62c8b9012 100644
+--- a/clang/include/clang/Lex/PreprocessingRecord.h
++++ b/clang/include/clang/Lex/PreprocessingRecord.h
+@@ -542,11 +542,13 @@ class Token;
+ 
+     using PPCallbacks::Elifdef;
+     using PPCallbacks::Elifndef;
++    // added
+     void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+-                 const MacroDefinition &MD) override;
++                 const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override;
+     void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+-                  const MacroDefinition &MD) override;
+-
++                  const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override;
++    // ended
++    
+     /// Hook called whenever the 'defined' operator is seen.
+     void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
+                  SourceRange Range) override;
+diff --git a/clang/include/clang/Lex/Preprocessor.h b/clang/include/clang/Lex/Preprocessor.h
+index fc7d0053f..ce00f5073 100644
+--- a/clang/include/clang/Lex/Preprocessor.h
++++ b/clang/include/clang/Lex/Preprocessor.h
+@@ -752,6 +752,11 @@ private:
+   /// Only one of CurLexer, or CurTokenLexer will be non-null.
+   std::unique_ptr<Lexer> CurLexer;
+ 
++  // added
++  /// Token collector for unexpanded tokens in #if/#elif directives
++  SmallVectorImpl<Token> *UnexpandedTokenCollector = nullptr; //SmallVector<Token, 32> *UnexpandedTokenCollector = nullptr;
++  // ended
++
+   /// The current top of the stack that we're lexing from
+   /// if not expanding a macro.
+   ///
+@@ -1217,6 +1222,46 @@ public:
+   const TargetInfo *getAuxTargetInfo() const { return AuxTarget; }
+   FileManager &getFileManager() const { return FileMgr; }
+   SourceManager &getSourceManager() const { return SourceMgr; }
++
++  // added
++  /// Begin collecting unexpanded tokens in #if/#elif directives
++  void BeginCollectingUnexpandedTokens(SmallVectorImpl<Token> *Collector) {
++    UnexpandedTokenCollector = Collector;
++  }
++
++  /// End collecting unexpanded tokens
++  void EndCollectingUnexpandedTokens() {
++    UnexpandedTokenCollector = nullptr;
++  }
++
++  /// Check if currently collecting unexpanded tokens
++  bool IsCollectingUnexpandedTokens() const {
++    return UnexpandedTokenCollector != nullptr;
++  }
++
++  /// Get the current unexpanded token collector  // ★ ここに追加
++  SmallVectorImpl<Token> *getUnexpandedTokenCollector() const {
++    return UnexpandedTokenCollector;
++  }
++  // ended
++
++  // // added
++  // /// Begin collecting unexpanded tokens in #if/#elif directives
++  // void BeginCollectingUnexpandedTokens(SmallVectorImpl<Token> *Collector) {
++  //   UnexpandedTokenCollector = Collector;
++  // }
++
++  // /// End collecting unexpanded tokens
++  // void EndCollectingUnexpandedTokens() {
++  //   UnexpandedTokenCollector = nullptr;
++  // }
++
++  // /// Check if currently collecting unexpanded tokens
++  // bool IsCollectingUnexpandedTokens() const {
++  //   return UnexpandedTokenCollector != nullptr;
++  // }
++  // // ended
++
+   HeaderSearch &getHeaderSearchInfo() const { return HeaderInfo; }
+ 
+   IdentifierTable &getIdentifierTable() { return Identifiers; }
+diff --git a/clang/lib/Frontend/Rewrite/InclusionRewriter.cpp b/clang/lib/Frontend/Rewrite/InclusionRewriter.cpp
+index 146205800..2950020b9 100644
+--- a/clang/lib/Frontend/Rewrite/InclusionRewriter.cpp
++++ b/clang/lib/Frontend/Rewrite/InclusionRewriter.cpp
+@@ -65,6 +65,7 @@ public:
+     ModuleEntryIncludes.insert(
+         {Tok.getLocation(), (Module *)Tok.getAnnotationValue()});
+   }
++// added
+ private:
+   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                    SrcMgr::CharacteristicKind FileType,
+@@ -79,9 +80,9 @@ private:
+                           bool ModuleImported,
+                           SrcMgr::CharacteristicKind FileType) override;
+   void If(SourceLocation Loc, SourceRange ConditionRange,
+-          ConditionValueKind ConditionValue) override;
++          ConditionValueKind ConditionValue, ArrayRef<Token> UnexpandedTokens) override;
+   void Elif(SourceLocation Loc, SourceRange ConditionRange,
+-            ConditionValueKind ConditionValue, SourceLocation IfLoc) override;
++            ConditionValueKind ConditionValue, SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override;
+   void WriteLineInfo(StringRef Filename, int Line,
+                      SrcMgr::CharacteristicKind FileType,
+                      StringRef Extra = StringRef());
+@@ -100,6 +101,7 @@ private:
+   bool IsIfAtLocationTrue(SourceLocation Loc) const;
+   StringRef NextIdentifierName(Lexer &RawLex, Token &RawToken);
+ };
++// ended
+ 
+ }  // end anonymous namespace
+ 
+@@ -201,7 +203,7 @@ void InclusionRewriter::InclusionDirective(
+ }
+ 
+ void InclusionRewriter::If(SourceLocation Loc, SourceRange ConditionRange,
+-                           ConditionValueKind ConditionValue) {
++                           ConditionValueKind ConditionValue, ArrayRef<Token> UnexpandedTokens) {
+   auto P = IfConditions.insert(std::make_pair(Loc, ConditionValue == CVK_True));
+   (void)P;
+   assert(P.second && "Unexpected revisitation of the same if directive");
+@@ -209,7 +211,7 @@ void InclusionRewriter::If(SourceLocation Loc, SourceRange ConditionRange,
+ 
+ void InclusionRewriter::Elif(SourceLocation Loc, SourceRange ConditionRange,
+                              ConditionValueKind ConditionValue,
+-                             SourceLocation IfLoc) {
++                             SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) {
+   auto P = IfConditions.insert(std::make_pair(Loc, ConditionValue == CVK_True));
+   (void)P;
+   assert(P.second && "Unexpected revisitation of the same elif directive");
+diff --git a/clang/lib/Index/IndexingAction.cpp b/clang/lib/Index/IndexingAction.cpp
+index 81c46a0d0..128a9ee5b 100644
+--- a/clang/lib/Index/IndexingAction.cpp
++++ b/clang/lib/Index/IndexingAction.cpp
+@@ -80,8 +80,9 @@ public:
+ 
+   using PPCallbacks::Elifdef;
+   using PPCallbacks::Elifndef;
++  // added
+   void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+-               const MacroDefinition &MD) override {
++               const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override {
+     if (!MD.getMacroInfo()) // Ignore non-existent macro.
+       return;
+     IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+@@ -89,13 +90,14 @@ public:
+                                    *MD.getMacroInfo());
+   }
+   void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+-                const MacroDefinition &MD) override {
++                const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) override {
+     if (!MD.getMacroInfo()) // Ignore non-existent macro.
+       return;
+     IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+                                    MacroNameTok.getLocation(),
+                                    *MD.getMacroInfo());
+   }
++  // ended
+ };
+ 
+ class IndexASTConsumer final : public ASTConsumer {
+diff --git a/clang/lib/Lex/PPConditionalDirectiveRecord.cpp b/clang/lib/Lex/PPConditionalDirectiveRecord.cpp
+index ddc88f8e8..7a1b1f239 100644
+--- a/clang/lib/Lex/PPConditionalDirectiveRecord.cpp
++++ b/clang/lib/Lex/PPConditionalDirectiveRecord.cpp
+@@ -72,12 +72,14 @@ void PPConditionalDirectiveRecord::addCondDirectiveLoc(
+   CondDirectiveLocs.push_back(DirLoc);
+ }
+ 
++// added
+ void PPConditionalDirectiveRecord::If(SourceLocation Loc,
+                                       SourceRange ConditionRange,
+-                                      ConditionValueKind ConditionValue) {
++                                      ConditionValueKind ConditionValue, ArrayRef<Token> UnexpandedTokens) {
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.push_back(Loc);
+ }
++// ended
+ 
+ void PPConditionalDirectiveRecord::Ifdef(SourceLocation Loc,
+                                          const Token &MacroNameTok,
+@@ -92,36 +94,39 @@ void PPConditionalDirectiveRecord::Ifndef(SourceLocation Loc,
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.push_back(Loc);
+ }
+-
++// added
+ void PPConditionalDirectiveRecord::Elif(SourceLocation Loc,
+                                         SourceRange ConditionRange,
+                                         ConditionValueKind ConditionValue,
+-                                        SourceLocation IfLoc) {
++                                        SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) {
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.back() = Loc;
+ }
++// ended
+ 
++// added
+ void PPConditionalDirectiveRecord::Elifdef(SourceLocation Loc, const Token &,
+-                                           const MacroDefinition &) {
++                                           const MacroDefinition &, ArrayRef<Token> UnexpandedTokens) {
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.back() = Loc;
+ }
+ void PPConditionalDirectiveRecord::Elifdef(SourceLocation Loc, SourceRange,
+-                                           SourceLocation) {
++                                           SourceLocation, ArrayRef<Token> UnexpandedTokens) {
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.back() = Loc;
+ }
+ 
+ void PPConditionalDirectiveRecord::Elifndef(SourceLocation Loc, const Token &,
+-                                            const MacroDefinition &) {
++                                            const MacroDefinition &, ArrayRef<Token> UnexpandedTokens) {
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.back() = Loc;
+ }
+ void PPConditionalDirectiveRecord::Elifndef(SourceLocation Loc, SourceRange,
+-                                            SourceLocation) {
++                                            SourceLocation, ArrayRef<Token> UnexpandedTokens) {
+   addCondDirectiveLoc(CondDirectiveLoc(Loc, CondDirectiveStack.back()));
+   CondDirectiveStack.back() = Loc;
+ }
++// ended
+ 
+ void PPConditionalDirectiveRecord::Else(SourceLocation Loc,
+                                         SourceLocation IfLoc) {
+diff --git a/clang/lib/Lex/PPDirectives.cpp b/clang/lib/Lex/PPDirectives.cpp
+index 4e77df9ec..5d1232625 100644
+--- a/clang/lib/Lex/PPDirectives.cpp
++++ b/clang/lib/Lex/PPDirectives.cpp
+@@ -619,13 +619,18 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+     StringRef RI = Tok.getRawIdentifier();
+ 
+     char FirstChar = RI[0];
++
++    // added
++    // if (FirstChar >= 'a' && FirstChar <= 'z' &&
++    //     FirstChar != 'i' && FirstChar != 'e') {
+     if (FirstChar >= 'a' && FirstChar <= 'z' &&
+-        FirstChar != 'i' && FirstChar != 'e') {
++        FirstChar != 'i' && FirstChar != 'e' && FirstChar != 'd' && FirstChar != 'u') {  // ★ 'd'を追加
+       CurPPLexer->ParsingPreprocessorDirective = false;
+       // Restore comment saving mode.
+       if (CurLexer) CurLexer->resetExtendedTokenMode();
+       continue;
+     }
++    // ended
+ 
+     // Get the identifier name without trigraphs or embedded newlines.  Note
+     // that we can't use Tok.getIdentifierInfo() because its lookup is disabled
+@@ -652,9 +657,88 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+       if (Sub.empty() ||   // "if"
+           Sub == "def" ||   // "ifdef"
+           Sub == "ndef") {  // "ifndef"
++
++        // added
++        // Addition: for ifdef/ifndef, retrieve the macro name and invoke callback
++        if (Sub == "def" || Sub == "ndef") {
++          Token MacroNameTok;
++          LexUnexpandedToken(MacroNameTok);
++          
++          if (MacroNameTok.is(tok::raw_identifier)) {
++            IdentifierInfo *II = &Identifiers.get(MacroNameTok.getRawIdentifier());
++            MacroNameTok.setIdentifierInfo(II);
++            MacroNameTok.setKind(tok::identifier);
++            
++            if (Callbacks) {
++              if (Sub == "def") {
++                Callbacks->SkippedIfdef(Tok.getLocation(), MacroNameTok);
++              } else {
++                Callbacks->SkippedIfndef(Tok.getLocation(), MacroNameTok);
++              }
++            }
++          }
++        } else if (Sub.empty()) {
++          
++          // In skipped blocks, do not evaluate—only collect tokens
++  
++          // Start position of the condition expression
++          SourceLocation CondStart = CurPPLexer->getSourceLocation();
++          
++          // Token collection
++          SmallVector<Token, 32> UnexpandedTokens;
++          Token CondTok;
++          SourceLocation CondEnd;
++          
++          // Read using LexUnexpandedToken while keeping LexingRawMode=true
++          while (true) {
++            LexUnexpandedToken(CondTok);
++            
++            if (CondTok.is(tok::eod)) {
++              CondEnd = CondTok.getLocation();
++              break;
++            }
++            
++            if (!CondTok.is(tok::comment)) {
++              // Convert raw_identifier to identifier
++              if (CondTok.is(tok::raw_identifier)) {
++                IdentifierInfo *II = &Identifiers.get(CondTok.getRawIdentifier());
++                CondTok.setIdentifierInfo(II);
++                CondTok.setKind(tok::identifier);
++              }
++              UnexpandedTokens.push_back(CondTok);
++            }
++          }
++          
++          SourceRange CondRange(CondStart, CondEnd);
++          
++          if (Callbacks) {
++            Callbacks->SkippedIf(Tok.getLocation(), CondRange, UnexpandedTokens);
++          }
++          
++          // // Temporarily set LexingRawMode to false
++          // assert(CurPPLexer->LexingRawMode && "Should be in raw mode when skipping");
++          // CurPPLexer->LexingRawMode = false;
++          
++          // SmallVector<Token, 32> UnexpandedTokens;
++          // BeginCollectingUnexpandedTokens(&UnexpandedTokens);
++          
++          // IdentifierInfo *IfNDefMacro = nullptr;
++          // DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
++          
++          // EndCollectingUnexpandedTokens();
++          
++          // // Restore LexingRawMode to its original state
++          // CurPPLexer->LexingRawMode = true;
++          
++          // if (Callbacks) {
++          //   Callbacks->SkippedIf(Tok.getLocation(), DER.ExprRange, UnexpandedTokens);
++          // }
++        }
++        // ended
++
+         // We know the entire #if/#ifdef/#ifndef block will be skipped, don't
+         // bother parsing the condition.
+-        DiscardUntilEndOfDirective();
++        //DiscardUntilEndOfDirective();
+         CurPPLexer->pushConditionalLevel(Tok.getLocation(), /*wasskipping*/true,
+                                        /*foundnonskip*/false,
+                                        /*foundelse*/false);
+@@ -682,6 +766,13 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+             Callbacks->Endif(Tok.getLocation(), CondInfo.IfLoc);
+           break;
+         } else {
++          // added
++          // Addition: Skipped #endif
++          if (Callbacks) {
++            Callbacks->SkippedEndif(Tok.getLocation(), CondInfo.IfLoc);
++          }
++          // ended
++
+           DiscardUntilEndOfDirective();
+         }
+       } else if (Sub == "lse") { // "else".
+@@ -713,6 +804,13 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+             Callbacks->Else(Tok.getLocation(), CondInfo.IfLoc);
+           break;
+         } else {
++
++          // added
++          // Addition: Skipped #else
++          if (Callbacks) {
++            Callbacks->SkippedElse(Tok.getLocation(), CondInfo.IfLoc);
++          }
++          // ended
+           DiscardUntilEndOfDirective();  // C99 6.10p4.
+         }
+       } else if (Sub == "lif") {  // "elif".
+@@ -728,35 +826,198 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+         // If this is in a skipping block or if we're already handled this #if
+         // block, don't bother parsing the condition.
+         if (CondInfo.WasSkipping || CondInfo.FoundNonSkip) {
++          // added
++
++          // In skipped blocks, do not evaluate; only collect tokens
++          // Start position of the condition expression
++          SourceLocation CondStart = CurPPLexer->getSourceLocation();
++          
++          // Token collection
++          SmallVector<Token, 32> UnexpandedTokens;
++          Token CondTok;
++          SourceLocation CondEnd;
++          
++          // Read using LexUnexpandedToken while keeping LexingRawMode=true
++          assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
++          
++          while (true) {
++            LexUnexpandedToken(CondTok);
++            
++            if (CondTok.is(tok::eod)) {
++              CondEnd = CondTok.getLocation();
++              break;
++            }
++            
++            if (!CondTok.is(tok::comment)) {
++              // Convert raw_identifier to identifier
++              if (CondTok.is(tok::raw_identifier)) {
++                IdentifierInfo *II = &Identifiers.get(CondTok.getRawIdentifier());
++                CondTok.setIdentifierInfo(II);
++                CondTok.setKind(tok::identifier);
++              }
++              UnexpandedTokens.push_back(CondTok);
++            }
++          }
++          
++          SourceRange CondRange(CondStart, CondEnd);
++          
++          if (Callbacks) {
++            Callbacks->SkippedElif(Tok.getLocation(), CondRange, 
++                                  CondInfo.IfLoc, UnexpandedTokens);
++          }
++
++          // // Temporarily set LexingRawMode to false
++          // assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
++          // CurPPLexer->LexingRawMode = false;
++          
++          // SmallVector<Token, 32> UnexpandedTokens;
++          // BeginCollectingUnexpandedTokens(&UnexpandedTokens);
++          
++          // IdentifierInfo *IfNDefMacro = nullptr;
++          // DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
++          
++          // EndCollectingUnexpandedTokens();
++          
++          // // Restore LexingRawMode to its original state
++          // CurPPLexer->LexingRawMode = true;
++          
++          // if (Callbacks) {
++          //   Callbacks->SkippedElif(Tok.getLocation(), DER.ExprRange, 
++          //                         CondInfo.IfLoc, UnexpandedTokens);
++          // }
++          // ended
++
+           // FIXME: We should probably do at least some minimal parsing of the
+           // condition to verify that it is well-formed. The current state
+           // allows #elif* directives with completely malformed (or missing)
+           // conditions.
+-          DiscardUntilEndOfDirective();
++          //DiscardUntilEndOfDirective();
++        
++        // added
+         } else {
+           // Restore the value of LexingRawMode so that identifiers are
+           // looked up, etc, inside the #elif expression.
+           assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
+           CurPPLexer->LexingRawMode = false;
++
++          // added
++          // Pre-read and collect all tokens before evaluation
++          SmallVector<Token, 32> UnexpandedTokens;
++          {
++            const char *SavedBufferPtr = nullptr;
++            bool SavedParsingPPDirective = false;
++            
++            if (CurLexer) {
++              SavedBufferPtr = CurLexer->getBufferLocation();
++            }
++            if (CurPPLexer) {
++              SavedParsingPPDirective = CurPPLexer->ParsingPreprocessorDirective;
++            }
++            
++            Token UtTok;
++            while (true) {
++              LexUnexpandedToken(UtTok);
++              if (UtTok.is(tok::eod)) break;
++              if (!UtTok.is(tok::comment)) {
++                if (UtTok.is(tok::raw_identifier)) {
++                  IdentifierInfo *II = &Identifiers.get(UtTok.getRawIdentifier());
++                  UtTok.setIdentifierInfo(II);
++                  UtTok.setKind(tok::identifier);
++                }
++                UnexpandedTokens.push_back(UtTok);
++              }
++            }
++            
++            if (CurLexer && SavedBufferPtr) {
++              CurLexer->BufferPtr = SavedBufferPtr;
++            }
++            if (CurPPLexer) {
++              CurPPLexer->ParsingPreprocessorDirective = SavedParsingPPDirective;
++            }
++          }
++          // ended
++          
+           IdentifierInfo *IfNDefMacro = nullptr;
+           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
++
++          // added
++          // // llvm::errs() << "=== ELIF: Starting evaluation ===\n";
++          // bool SavedDisableMacroExpansion = DisableMacroExpansion;
++          // DisableMacroExpansion = false;
++          // // ended
++          
++          // // Begin collecting unexpanded tokens
++          // SmallVector<Token, 32> UnexpandedTokens;
++          // BeginCollectingUnexpandedTokens(&UnexpandedTokens);
++          
++          // IdentifierInfo *IfNDefMacro = nullptr;
++          // DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
++          
++          // // End collecting unexpanded tokens
++          // EndCollectingUnexpandedTokens();
++          
++          // // added
++          // DisableMacroExpansion = SavedDisableMacroExpansion;
++          // ended
++
+           // Stop if Lexer became invalid after hitting code completion token.
+           if (!CurPPLexer)
+             return;
+           const bool CondValue = DER.Conditional;
++
++          // added
++          // llvm::errs() << "=== ELIF: Result = " << CondValue 
++          //      << ", FoundNonSkip = " << CondInfo.FoundNonSkip << " ===\n";
++          // ended
++
+           CurPPLexer->LexingRawMode = true;
+           if (Callbacks) {
+             Callbacks->Elif(
+                 Tok.getLocation(), DER.ExprRange,
+                 (CondValue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False),
+-                CondInfo.IfLoc);
++                CondInfo.IfLoc, UnexpandedTokens);
+           }
++
++          // added
+           // If this condition is true, enter it!
+           if (CondValue) {
+             CondInfo.FoundNonSkip = true;
++            // llvm::errs() << "=== ELIF: Breaking to enter block ===\n";
+             break;
+           }
++          
++          // llvm::errs() << "=== ELIF: Continuing to skip ===\n";
++          // ended
++
++          // } else {
++          //   // Restore the value of LexingRawMode so that identifiers are
++          //   // looked up, etc, inside the #elif expression.
++          //   assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
++          //   CurPPLexer->LexingRawMode = false;
++          //   IdentifierInfo *IfNDefMacro = nullptr;
++          //   DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
++          //   // Stop if Lexer became invalid after hitting code completion token.
++          //   if (!CurPPLexer)
++          //     return;
++          //   const bool CondValue = DER.Conditional;
++          //   CurPPLexer->LexingRawMode = true;
++          //   if (Callbacks) {
++          //     Callbacks->Elif(
++          //         Tok.getLocation(), DER.ExprRange,
++          //         // added
++          //         (CondValue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False),
++          //         CondInfo.IfLoc, {});
++          //         // ended
++          //   }
++          //   // If this condition is true, enter it!
++          //   if (CondValue) {
++          //     CondInfo.FoundNonSkip = true;
++          //     break;
++          //   }
++
++        // ended
+         }
++
+       } else if (Sub == "lifdef" ||  // "elifdef"
+                  Sub == "lifndef") { // "elifndef"
+         bool IsElifDef = Sub == "lifdef";
+@@ -818,10 +1079,10 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+           if (Callbacks) {
+             if (IsElifDef) {
+               Callbacks->Elifdef(DirectiveToken.getLocation(), MacroNameTok,
+-                                 MD);
++                                 MD, {});
+             } else {
+               Callbacks->Elifndef(DirectiveToken.getLocation(), MacroNameTok,
+-                                  MD);
++                                  MD, {});
+             }
+           }
+           // If this condition is true, enter it!
+@@ -833,6 +1094,55 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+       } else {
+         SuggestTypoedDirective(Tok, Directive);
+       }
++
++    // added
++    } else if (Directive == "define") {
++
++      // #define inside skipped block – only retrieve macro name
++      Token MacroNameTok;
++      LexUnexpandedToken(MacroNameTok);
++      
++      // Check whether the macro name was obtained
++      if (MacroNameTok.is(tok::raw_identifier)) {
++        // rIf raw_identifier, manually set IdentifierInfo
++        IdentifierInfo *II = &Identifiers.get(MacroNameTok.getRawIdentifier());
++        MacroNameTok.setIdentifierInfo(II);
++        MacroNameTok.setKind(tok::identifier);
++        
++        if (Callbacks) {
++          Callbacks->SkippedMacroDefined(MacroNameTok);
++        }
++      }
++      
++      // Skip the remaining part
++      DiscardUntilEndOfDirective();
++      CurPPLexer->ParsingPreprocessorDirective = false;
++      if (CurLexer) CurLexer->resetExtendedTokenMode();
++      continue;
++    
++    // Addition
++    } else if (Directive == "undef") {
++      // #undef inside skipped block
++      Token MacroNameTok;
++      LexUnexpandedToken(MacroNameTok);
++      
++      if (MacroNameTok.is(tok::raw_identifier)) {
++        IdentifierInfo *II = &Identifiers.get(MacroNameTok.getRawIdentifier());
++        MacroNameTok.setIdentifierInfo(II);
++        MacroNameTok.setKind(tok::identifier);
++        
++        if (Callbacks) {
++          Callbacks->SkippedMacroUndefined(MacroNameTok);  // new callback
++        }
++      }
++      
++      DiscardUntilEndOfDirective();
++      CurPPLexer->ParsingPreprocessorDirective = false;
++      if (CurLexer) CurLexer->resetExtendedTokenMode();
++      continue;
++
++    // ended  
++
+     } else {
+       SuggestTypoedDirective(Tok, Directive);
+     }
+@@ -3392,10 +3702,12 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
+     markMacroAsUsed(MI);
+ 
+   if (Callbacks) {
++    // added
+     if (isIfndef)
+       Callbacks->Ifndef(DirectiveTok.getLocation(), MacroNameTok, MD);
+     else
+       Callbacks->Ifdef(DirectiveTok.getLocation(), MacroNameTok, MD);
++    // ended
+   }
+ 
+   bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+@@ -3429,10 +3741,99 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
+                                      bool ReadAnyTokensBeforeDirective) {
+   ++NumIf;
+ 
++  // added
++  // Begin collecting unexpanded tokens
++  // SmallVector<Token, 32> UnexpandedTokens;
++  // BeginCollectingUnexpandedTokens(&UnexpandedTokens);
++
++
++  // added
++  // Before evaluation, pre-read and collect all tokens
++  SmallVector<Token, 32> UnexpandedTokens;
++  {
++    const char *SavedBufferPtr = nullptr;
++    bool SavedParsingPPDirective = false;
++    
++    if (CurLexer) {
++      SavedBufferPtr = CurLexer->getBufferLocation();
++    }
++    if (CurPPLexer) {
++      SavedParsingPPDirective = CurPPLexer->ParsingPreprocessorDirective;
++    }
++    
++    Token Tok;
++    while (true) {
++      LexUnexpandedToken(Tok);
++      if (Tok.is(tok::eod)) break;
++      if (!Tok.is(tok::comment)) {
++        if (Tok.is(tok::raw_identifier)) {
++          IdentifierInfo *II = &Identifiers.get(Tok.getRawIdentifier());
++          Tok.setIdentifierInfo(II);
++          Tok.setKind(tok::identifier);
++        }
++        UnexpandedTokens.push_back(Tok);
++      }
++    }
++    
++    // Rewind
++    if (CurLexer && SavedBufferPtr) {
++      CurLexer->BufferPtr = SavedBufferPtr;
++    }
++    if (CurPPLexer) {
++      CurPPLexer->ParsingPreprocessorDirective = SavedParsingPPDirective;
++    }
++  }
++  // ended
++
++  // Parse and evaluate the conditional expression.
++
++  // SmallVector<Token, 32> UnexpandedTokens;
++  
++  // const char *SavedBufferPtr = nullptr;
++  // if (CurLexer)
++  //   SavedBufferPtr = CurLexer->getBufferLocation();
++  
++  // // Save lexer position (for rewinding)
++  // // const char *CurPTHLexerPos = CurPTHLexer ? CurPTHLexer->getFilePtr() : nullptr;
++  // SourceLocation CurLexerLoc;
++  // if (CurLexer)
++  //   CurLexerLoc = CurLexer->getFileLoc();
++  
++  // // Token collection loop
++  // Token Tok;
++  // while (true) {
++  //   LexUnexpandedToken(Tok);
++  //   if (Tok.is(tok::eod)) break;
++  //   if (Tok.isNot(tok::comment)) {
++  //     UnexpandedTokens.push_back(Tok);
++  //   }
++  // }
++  
++  // // Rewind lexer position
++  // // if (CurPTHLexer) {
++  // //   CurPTHLexer->seekToPos(CurPTHLexerPos);
++  // // } else if (CurLexer) {
++  // //   CurLexer->seek(CurLexerLoc, /*IsAtStartOfLine=*/false);
++  // // }
++  // // if (CurLexer) {
++  // //   // CurLexer->seek(CurLexer->getFileLocForOffset(SM.getFileOffset(CurLexerLoc)), /*IsAtStartOfLine=*/false);
++  // //   // CurLexer->seek(CurLexerLoc, /*IsAtStartOfLine=*/false);
++  // // }
++  // if (CurLexer && SavedBufferPtr)
++  //     CurLexer->BufferPtr = SavedBufferPtr;
++  // ended
++
++
+   // Parse and evaluate the conditional expression.
+   IdentifierInfo *IfNDefMacro = nullptr;
+   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
+   const bool ConditionalTrue = DER.Conditional;
++
++  // added
++  // End collecting unexpanded tokens
++  // EndCollectingUnexpandedTokens();
++  // ended
++
+   // Lexer might become invalid if we hit code completion point while evaluating
+   // expression.
+   if (!CurPPLexer)
+@@ -3448,10 +3849,13 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
+       CurPPLexer->MIOpt.EnterTopLevelConditional();
+   }
+ 
++  // added
+   if (Callbacks)
+     Callbacks->If(
+         IfToken.getLocation(), DER.ExprRange,
+-        (ConditionalTrue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False));
++        (ConditionalTrue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False),
++        UnexpandedTokens);
++  // ended
+ 
+   bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+     getSourceManager().isInMainFile(IfToken.getLocation());
+@@ -3567,6 +3971,46 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
+     break;
+   }
+ 
++  // added
++  // SmallVector<Token, 32> UnexpandedTokens;
++  
++  // const char *SavedBufferPtr = nullptr;
++  // if (CurLexer)
++  //   SavedBufferPtr = CurLexer->getBufferLocation();
++  
++
++  // if (Kind == tok::pp_elif) {
++  //   // レキサー位置を保存
++  //   //const char *CurPTHLexerPos = CurPTHLexer ? CurPTHLexer->getFilePtr() : nullptr;
++  //   SourceLocation CurLexerLoc;
++  //   if (CurLexer)
++  //     CurLexerLoc = CurLexer->getFileLoc();
++    
++  //   // トークン収集
++  //   Token Tok;
++  //   while (true) {
++  //     LexUnexpandedToken(Tok);
++  //     if (Tok.is(tok::eod)) break;
++  //     if (Tok.isNot(tok::comment)) {
++  //       UnexpandedTokens.push_back(Tok);
++  //     }
++  //   }
++    
++  //   // レキサー位置を巻き戻し
++  //   // if (CurPTHLexer) {
++  //   //   CurPTHLexer->seekToPos(CurPTHLexerPos);
++  //   // } else if (CurLexer) {
++  //   //   CurLexer->seek(CurLexerLoc, /*IsAtStartOfLine=*/false);
++  //   // }
++  //   // if (CurLexer) {
++  //   //   // CurLexer->seek(CurLexer->getFileLocForOffset(SM.getFileOffset(CurLexerLoc)), /*IsAtStartOfLine=*/false);
++  //   //   // CurLexer->seek(CurLexerLoc, /*IsAtStartOfLine=*/false);
++  //   // }
++  //   if (CurLexer && SavedBufferPtr)
++  //       CurLexer->BufferPtr = SavedBufferPtr;
++  // }
++  // ended
++
+   // #elif directive in a non-skipping conditional... start skipping.
+   // We don't care what the condition is, because we will always skip it (since
+   // the block immediately before it was included).
+@@ -3589,14 +4033,22 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
+   if (Callbacks) {
+     switch (Kind) {
+     case tok::pp_elif:
++      // added
+       Callbacks->Elif(ElifToken.getLocation(), ConditionRange,
+-                      PPCallbacks::CVK_NotEvaluated, CI.IfLoc);
++                      PPCallbacks::CVK_NotEvaluated, CI.IfLoc, {}); //UnexpandedTokens);
+       break;
++      // ended
+     case tok::pp_elifdef:
+-      Callbacks->Elifdef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
++      // added
++      Callbacks->Elifdef(ElifToken.getLocation(), ConditionRange, CI.IfLoc, {});
++      // Callbacks->Elifdef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
++      // ended
+       break;
+     case tok::pp_elifndef:
+-      Callbacks->Elifndef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
++      // added
++      Callbacks->Elifndef(ElifToken.getLocation(), ConditionRange, CI.IfLoc, {});
++      // Callbacks->Elifndef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
++      // ended
+       break;
+     default:
+       assert(false && "unexpected directive kind");
+diff --git a/clang/lib/Lex/PPExpressions.cpp b/clang/lib/Lex/PPExpressions.cpp
+index 8bb82bd22..39599d71e 100644
+--- a/clang/lib/Lex/PPExpressions.cpp
++++ b/clang/lib/Lex/PPExpressions.cpp
+@@ -128,6 +128,17 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
+ 
+   // Otherwise, we got an identifier, is it defined to something?
+   IdentifierInfo *II = PeekTok.getIdentifierInfo();
++
++  // // added
++  // // Addition: add the macro name inside defined() to UnexpandedTokenCollector
++  // if (PP.IsCollectingUnexpandedTokens()) {
++  //   if (auto *Collector = PP.getUnexpandedTokenCollector()) {
++  //     Collector->push_back(PeekTok);
++  //   }
++  // }
++  // // ended
++
++  
+   MacroDefinition Macro = PP.getMacroDefinition(II);
+   Result.Val = !!Macro;
+   Result.Val.setIsUnsigned(false); // Result is signed intmax_t.
+diff --git a/clang/lib/Lex/PPMacroExpansion.cpp b/clang/lib/Lex/PPMacroExpansion.cpp
+index fb88ec2bf..911655e71 100644
+--- a/clang/lib/Lex/PPMacroExpansion.cpp
++++ b/clang/lib/Lex/PPMacroExpansion.cpp
+@@ -1413,6 +1413,15 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+     return;
+   }
+ 
++  // // added
++  // if (PP.IsCollectingUnexpandedTokens()) {
++  //   if (auto *Collector = PP.getUnexpandedTokenCollector()) {
++  //     Collector->push_back(Tok);  // '('
++  //   }
++  // }
++  // // ended
++
++
+   unsigned ParenDepth = 1;
+   SourceLocation LParenLoc = Tok.getLocation();
+   std::optional<int> Result;
+@@ -1427,6 +1436,17 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+       PP.LexUnexpandedToken(Tok);
+ 
+ already_lexed:
++
++    // // added
++    // if (PP.IsCollectingUnexpandedTokens()) {
++    //   if (auto *Collector = PP.getUnexpandedTokenCollector()) {
++    //     if (!Tok.isOneOf(tok::eof, tok::eod, tok::comment)) {
++    //       Collector->push_back(Tok);
++    //     }
++    //   }
++    // }
++    // // ended
++
+     switch (Tok.getKind()) {
+       case tok::eof:
+       case tok::eod:
+diff --git a/clang/lib/Lex/PreprocessingRecord.cpp b/clang/lib/Lex/PreprocessingRecord.cpp
+index be5aac7ef..88225d1b7 100644
+--- a/clang/lib/Lex/PreprocessingRecord.cpp
++++ b/clang/lib/Lex/PreprocessingRecord.cpp
+@@ -407,7 +407,7 @@ void PreprocessingRecord::Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+ }
+ 
+ void PreprocessingRecord::Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+-                                  const MacroDefinition &MD) {
++                                  const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) {
+   // This is not actually a macro expansion but record it as a macro reference.
+   if (MD)
+     addMacroExpansion(MacroNameTok, MD.getMacroInfo(),
+@@ -424,7 +424,7 @@ void PreprocessingRecord::Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+ 
+ void PreprocessingRecord::Elifndef(SourceLocation Loc,
+                                    const Token &MacroNameTok,
+-                                   const MacroDefinition &MD) {
++                                   const MacroDefinition &MD, ArrayRef<Token> UnexpandedTokens) {
+   // This is not actually a macro expansion but record it as a macro reference.
+   if (MD)
+     addMacroExpansion(MacroNameTok, MD.getMacroInfo(),
+diff --git a/clang/lib/Lex/Preprocessor.cpp b/clang/lib/Lex/Preprocessor.cpp
+index 63e27e62c..34c5e10f0 100644
+--- a/clang/lib/Lex/Preprocessor.cpp
++++ b/clang/lib/Lex/Preprocessor.cpp
+@@ -776,9 +776,20 @@ void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
+ bool Preprocessor::HandleIdentifier(Token &Identifier) {
+   assert(Identifier.getIdentifierInfo() &&
+          "Can't handle identifiers without identifier info!");
+-
++         
+   IdentifierInfo &II = *Identifier.getIdentifierInfo();
+ 
++  // added
++  // Debug
++  // if (II.getName() == "__WORDSIZE") {
++  //   llvm::errs() << "=== __WORDSIZE in HandleIdentifier ===\n";
++  //   llvm::errs() << "IsCollecting: " << IsCollectingUnexpandedTokens() << "\n";
++  //   llvm::errs() << "DisableMacroExpansion: " << DisableMacroExpansion << "\n";
++  //   if (CurPPLexer)
++  //     llvm::errs() << "LexingRawMode: " << CurPPLexer->LexingRawMode << "\n";
++  // }
++  // ended
++
+   // If the information about this identifier is out of date, update it from
+   // the external source.
+   // We have to treat __VA_ARGS__ in a special way, since it gets
+@@ -804,16 +815,58 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
+     HandlePoisonedIdentifier(Identifier);
+   }
+ 
++  // added
++  // If this is a macro to be expanded, do it.
++  // if (const MacroDefinition MD = getMacroDefinition(&II)) {
++  //   const auto *MI = MD.getMacroInfo();
++  //   assert(MI && "macro definition with no macro info?");
++  //   if (!DisableMacroExpansion) {
++  //     if (!Identifier.isExpandDisabled() && MI->isEnabled()) {
++  //       // C99 6.10.3p10: If the preprocessing token immediately after the
++  //       // macro name isn't a '(', this macro should not be expanded.
++  //       if (!MI->isFunctionLike() || isNextPPTokenLParen())
++  //         return HandleMacroExpandedIdentifier(Identifier, MD);
+   // If this is a macro to be expanded, do it.
+   if (const MacroDefinition MD = getMacroDefinition(&II)) {
+     const auto *MI = MD.getMacroInfo();
++
++    // added
++    // if (II.getName() == "__WORDSIZE") {
++    //   llvm::errs() << "  Macro found\n";
++    //   llvm::errs() << "  isEnabled: " << MI->isEnabled() << "\n";
++    //   llvm::errs() << "  isExpandDisabled: " << Identifier.isExpandDisabled() << "\n";
++    // }
++    // ended
++
+     assert(MI && "macro definition with no macro info?");
+     if (!DisableMacroExpansion) {
+       if (!Identifier.isExpandDisabled() && MI->isEnabled()) {
++        // Collect unexpanded token before macro expansion
++        // if (UnexpandedTokenCollector && 
++        //     !Identifier.is(tok::eof) && 
++        //     !Identifier.is(tok::eod) &&
++        //     !Identifier.is(tok::comment)) {
++        //   UnexpandedTokenCollector->push_back(Identifier);
++
++        //   // added
++        //   // if (II.getName() == "__WORDSIZE") {
++        //   //   llvm::errs() << "  → Collected!\n";
++        //   // }
++        //   // ended
++        // }
++        
+         // C99 6.10.3p10: If the preprocessing token immediately after the
+         // macro name isn't a '(', this macro should not be expanded.
+-        if (!MI->isFunctionLike() || isNextPPTokenLParen())
++        if (!MI->isFunctionLike() || isNextPPTokenLParen()) {
++          // added
++          // if (II.getName() == "__WORDSIZE") {
++          //   llvm::errs() << "  → Expanding...\n";
++          // }
++          // ended
++
+           return HandleMacroExpandedIdentifier(Identifier, MD);
++          // ended
++        }
+       } else {
+         // C99 6.10.3.4p2 says that a disabled macro may never again be
+         // expanded, even if it's in a context where it could be expanded in the
+@@ -873,6 +926,16 @@ void Preprocessor::Lex(Token &Result) {
+   while (!CurLexerCallback(*this, Result))
+     ;
+ 
++  // added
++  // Collect unexpanded tokens if requested (for #if/#elif directives)
++  // if (UnexpandedTokenCollector && 
++  //   !Result.is(tok::eof) && 
++  //   !Result.is(tok::eod) &&
++  //   !Result.is(tok::comment)) {
++  //   UnexpandedTokenCollector->push_back(Result);
++  // }
++  // ended
++
+   if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
+     return;
+ 
+diff --git a/clang/unittests/Lex/PPCallbacksTest.cpp b/clang/unittests/Lex/PPCallbacksTest.cpp
+index f3cdb1dfb..ae183c02a 100644
+--- a/clang/unittests/Lex/PPCallbacksTest.cpp
++++ b/clang/unittests/Lex/PPCallbacksTest.cpp
+@@ -77,16 +77,18 @@ public:
+   };
+ 
+   std::vector<Result> Results;
+-
++  // added
+   void If(SourceLocation Loc, SourceRange ConditionRange,
+-          ConditionValueKind ConditionValue) override {
++          ConditionValueKind ConditionValue, ArrayRef<Token> UnexpandedTokens) override {
+     Results.emplace_back(ConditionRange, ConditionValue);
+   }
++  
+ 
+   void Elif(SourceLocation Loc, SourceRange ConditionRange,
+-            ConditionValueKind ConditionValue, SourceLocation IfLoc) override {
++            ConditionValueKind ConditionValue, SourceLocation IfLoc, ArrayRef<Token> UnexpandedTokens) override {
+     Results.emplace_back(ConditionRange, ConditionValue);
+   }
++  // ended
+ };
+ 
+ // Stub to collect data from PragmaOpenCLExtension callbacks.
