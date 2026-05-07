@@ -1,6 +1,9 @@
 llvm-project/
 llvm-custom/
+
 macro_finder*/build/
 macro_analyzer*/build/
+strip_line*/build/
+
 macro_finder*/metadata/
 macro_finder*/output.json
