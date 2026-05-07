@@ -1,0 +1,10 @@
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/intrinsics_gen.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/omp_gen.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/acc_gen.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/ARMTargetParserTableGen.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/AArch64TargetParserTableGen.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/RISCVTargetParserTableGen.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/clang-tablegen-targets.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/stripe_line.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/edit_cache.dir
+/root/kiso-parser-macro/strip_line/build/CMakeFiles/rebuild_cache.dir
