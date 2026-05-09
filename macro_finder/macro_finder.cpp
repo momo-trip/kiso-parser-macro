@@ -1456,19 +1456,27 @@ void addCustomIncludePaths(ClangTool &Tool) {
         "-isystem/usr/lib/llvm-19/lib/clang/19/include",
       };
 
-      if (Filename.ends_with(".cxx") || Filename.ends_with(".cpp") || 
-          Filename.ends_with(".cc") || Filename.ends_with(".C")) {
+      bool isCxx = Filename.ends_with(".cxx") || Filename.ends_with(".cpp") || 
+                   Filename.ends_with(".cc")  || Filename.ends_with(".C")   ||
+                   Filename.ends_with(".hpp") || Filename.ends_with(".hxx");
+
+      if (isCxx) {
         // For C++ files: add C++ headers
         std::vector<std::string> CxxArgs = {
           "-isystem/usr/include/c++/11",
-          "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+          //"-isystem/usr/include/x86_64-linux-gnu/c++/11",
+          "-isystem/usr/include/aarch64-linux-gnu/c++/11",
           "-isystem/usr/include/c++/11/backward",
         };
         CommonArgs.insert(CommonArgs.end(), CxxArgs.begin(), CxxArgs.end());
+      } else {
+        // ★ For C files: completely block C++ system includes
+        CommonArgs.push_back("-nostdinc++");
       }
 
       // System headers (common)
-      CommonArgs.push_back("-isystem/usr/include/x86_64-linux-gnu");
+      //CommonArgs.push_back("-isystem/usr/include/x86_64-linux-gnu");
+      CommonArgs.push_back("-isystem/usr/include/aarch64-linux-gnu");
       CommonArgs.push_back("-isystem/usr/include");
 
       NewArgs.insert(NewArgs.begin() + 1, CommonArgs.begin(), CommonArgs.end());

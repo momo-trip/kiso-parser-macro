@@ -854,7 +854,7 @@ void addCustomIncludePaths(ClangTool &Tool) {
         if (Filename.ends_with(".cxx") || Filename.ends_with(".cpp") || 
             Filename.ends_with(".cc") || Filename.ends_with(".C")) {
             CommonArgs.push_back("-isystem/usr/include/c++/11");
-            CommonArgs.push_back("-isystem/usr/include/x86_64-linux-gnu/c++/11");
+            CommonArgs.push_back("-isystem/usr/include/aarch64-linux-gnu/c++/11");
             CommonArgs.push_back("-isystem/usr/include/c++/11/backward");
         }
 
