@@ -1421,7 +1421,7 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
   //"-isystem/usr/lib/llvm-19/lib/clang/19/include",
   // C++ headers (before C headers)
   // "-isystem/usr/include/c++/11",
-  // "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+  // "-isystem/usr/include/aarch64-linux-gnu/c++/11",
   // "-isystem/usr/include/c++/11/backward",
   
   // C system headers (after C++ - so they can be found by #include_next)
@@ -1464,7 +1464,7 @@ void addCustomIncludePaths(ClangTool &Tool) {
         // For C++ files: add C++ headers
         std::vector<std::string> CxxArgs = {
           "-isystem/usr/include/c++/11",
-          //"-isystem/usr/include/x86_64-linux-gnu/c++/11",
+          //"-isystem/usr/include/aarch64-linux-gnu/c++/11",
           "-isystem/usr/include/aarch64-linux-gnu/c++/11",
           "-isystem/usr/include/c++/11/backward",
         };
@@ -1475,7 +1475,7 @@ void addCustomIncludePaths(ClangTool &Tool) {
       }
 
       // System headers (common)
-      //CommonArgs.push_back("-isystem/usr/include/x86_64-linux-gnu");
+      //CommonArgs.push_back("-isystem/usr/include/aarch64-linux-gnu");
       CommonArgs.push_back("-isystem/usr/include/aarch64-linux-gnu");
       CommonArgs.push_back("-isystem/usr/include");
 
@@ -1567,11 +1567,11 @@ int main(int argc, const char **argv) {
 //   //   "-isystem/usr/lib/llvm-19/lib/clang/19/include",
 //   //   // C++ headers (before C headers)
 //   //   // "-isystem/usr/include/c++/11",
-//   //   // "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+//   //   // "-isystem/usr/include/aarch64-linux-gnu/c++/11",
 //   //   // "-isystem/usr/include/c++/11/backward",
     
 //   //   // C system headers (after C++ - so they can be found by #include_next)
-//   //   "-isystem/usr/include/x86_64-linux-gnu",
+//   //   "-isystem/usr/include/aarch64-linux-gnu",
 //   //   "-isystem/usr/include"},
 //   //   ArgumentInsertPosition::BEGIN));
 
@@ -1584,7 +1584,7 @@ int main(int argc, const char **argv) {
 //           "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
 //           "-w",
 //           "-isystem/usr/lib/llvm-19/lib/clang/19/include",
-//           "-isystem/usr/include/x86_64-linux-gnu",
+//           "-isystem/usr/include/aarch64-linux-gnu",
 //           "-isystem/usr/include",
 //         };
 //         NewArgs.insert(NewArgs.begin() + 1, CArgs.begin(), CArgs.end());
@@ -1594,9 +1594,9 @@ int main(int argc, const char **argv) {
 //           "-w",
 //           "-isystem/usr/lib/llvm-19/lib/clang/19/include",
 //           "-isystem/usr/include/c++/11",
-//           "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+//           "-isystem/usr/include/aarch64-linux-gnu/c++/11",
 //           "-isystem/usr/include/c++/11/backward",
-//           "-isystem/usr/include/x86_64-linux-gnu",
+//           "-isystem/usr/include/aarch64-linux-gnu",
 //           "-isystem/usr/include",
 //         };
 //         NewArgs.insert(NewArgs.end(), CxxArgs.begin(), CxxArgs.end());
@@ -1613,6 +1613,6 @@ int main(int argc, const char **argv) {
 // Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
 //   {"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //    "-isystem/usr/include",
-//    "-isystem/usr/include/x86_64-linux-gnu",
-//   "-isystem/usr/lib/gcc/x86_64-linux-gnu/11/include"},
+//    "-isystem/usr/include/aarch64-linux-gnu",
+//   "-isystem/usr/lib/gcc/aarch64-linux-gnu/11/include"},
 //   ArgumentInsertPosition::BEGIN));

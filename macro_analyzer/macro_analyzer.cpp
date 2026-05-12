@@ -878,11 +878,11 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
     //"-isystem/usr/lib/llvm-19/lib/clang/19/include",
     // C++ headers (before C headers)
     // "-isystem/usr/include/c++/11",
-    // "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+    // "-isystem/usr/include/aarch64-linux-gnu/c++/11",
     // "-isystem/usr/include/c++/11/backward",
     
     // C system headers (after C++ so they can be found via #include_next)
-    "-isystem/usr/include/x86_64-linux-gnu",
+    "-isystem/usr/include/aarch64-linux-gnu",
     "-isystem/usr/include",
     
     // Compiler settings
@@ -897,11 +897,11 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
 //     "-w",
 //     "-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //     "-isystem/usr/include/c++/11",
-//     "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+//     "-isystem/usr/include/aarch64-linux-gnu/c++/11",
 //     "-isystem/usr/include/c++/11/backward",
-//     "-isystem/usr/lib/gcc/x86_64-linux-gnu/11/include",
+//     "-isystem/usr/lib/gcc/aarch64-linux-gnu/11/include",
 //     "-isystem/usr/local/include",
-//     "-isystem/usr/include/x86_64-linux-gnu",
+//     "-isystem/usr/include/aarch64-linux-gnu",
 //     "-isystem/usr/include",
 //     "-std=gnu11",
 //     "-fno-strict-aliasing",
@@ -916,10 +916,10 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
 // static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
 //     "-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
 //     "-isystem/usr/include",
-//     "-isystem/usr/include/x86_64-linux-gnu",
-//     "-isystem/usr/lib/gcc/x86_64-linux-gnu/11/include",
+//     "-isystem/usr/include/aarch64-linux-gnu",
+//     "-isystem/usr/lib/gcc/aarch64-linux-gnu/11/include",
 //     "-isystem/usr/include/c++/11",
-//     "-isystem/usr/include/x86_64-linux-gnu/c++/11",
+//     "-isystem/usr/include/aarch64-linux-gnu/c++/11",
 //     "-isystem/usr/include/c++/11/backward"
 // };
 
@@ -947,7 +947,7 @@ void addCustomIncludePaths(ClangTool &Tool) {
             CommonArgs.push_back("-isystem/usr/include/c++/11/backward");
         }
 
-        CommonArgs.push_back("-isystem/usr/include/x86_64-linux-gnu");
+        CommonArgs.push_back("-isystem/usr/include/aarch64-linux-gnu");
         CommonArgs.push_back("-isystem/usr/include");
 
         NewArgs.insert(NewArgs.begin() + 1, CommonArgs.begin(), CommonArgs.end());
