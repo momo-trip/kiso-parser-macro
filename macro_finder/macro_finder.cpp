@@ -1425,7 +1425,7 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
   // "-isystem/usr/include/c++/11/backward",
   
   // C system headers (after C++ - so they can be found by #include_next)
-  "-isystem/usr/include/x86_64-linux-gnu",
+  "-isystem/usr/include/aarch64-linux-gnu",
   "-isystem/usr/include",
   
   // Compiler settings

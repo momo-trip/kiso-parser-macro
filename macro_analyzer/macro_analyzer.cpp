@@ -43,6 +43,25 @@ struct UsageLocation {
     bool resolved = false;
 };
 
+struct UsesPatternEntry {
+    std::string name;
+    std::string definition;
+    bool operator<(const UsesPatternEntry &o) const {
+        if (name != o.name) return name < o.name;
+        return definition < o.definition;
+    }
+    bool operator==(const UsesPatternEntry &o) const {
+        return name == o.name && definition == o.definition;
+    }
+};
+
+struct UsesPattern {
+    std::vector<UsesPatternEntry> entries;
+    bool operator<(const UsesPattern &o) const { return entries < o.entries; }
+    bool operator==(const UsesPattern &o) const { return entries == o.entries; }
+};
+
+
 struct MacroSymbolInfo {
     std::string name;
     std::string kind;
@@ -54,9 +73,30 @@ struct MacroSymbolInfo {
 
 class MacroCollector {
 public:
+    
+    // added for MacroKey
+    struct MacroKey {
+        std::string name;
+        std::string defLocStr;
+        UsesPattern usesPattern;
+        bool operator<(const MacroKey &o) const {
+            if (name != o.name) return name < o.name;
+            if (defLocStr != o.defLocStr) return defLocStr < o.defLocStr;
+            return usesPattern < o.usesPattern;
+        }
+    };
+
+    static std::string makeOwnerKeyStr(const MacroKey &k) {
+        return k.name + "@" + k.defLocStr;
+    }
+
+    // ended for MacroKey
+
     SourceManager *SM;
     Preprocessor *PP;
-    std::map<std::string, MacroSymbolInfo> macros;
+    // std::map<std::string, MacroSymbolInfo> macros;
+    std::map<MacroKey, MacroSymbolInfo> macros;
+
     std::map<std::string, SymbolInfo> symbols;
     std::set<std::pair<std::string, std::string>> resolvedTokens;
     
@@ -119,7 +159,7 @@ public:
         return {StartLoc.getLine(), EndLoc.getLine()};
     }
     
-    void collectMacroUses(const MacroInfo *MI, const std::string &ownerName) {
+    void collectMacroUses(const MacroInfo *MI, const MacroKey &ownerKey) {
         if (!MI) return;
         
         std::set<std::string> paramNames;
@@ -128,6 +168,8 @@ public:
                 if (Param) paramNames.insert(Param->getName().str());
             }
         }
+        
+        std::string ownerKeyStr = makeOwnerKeyStr(ownerKey);   
         
         for (const Token &Tok : MI->tokens()) {
             if (Tok.is(tok::identifier) || Tok.is(tok::raw_identifier)) {
@@ -161,8 +203,9 @@ public:
                         usage.startLine = sl.isValid() ? sl.getLine() : 0;
                         usage.endLine = el.isValid() ? el.getLine() : 0;
                         usage.resolved = true;
-                        resolvedTokens.insert({ownerName, tokenName});
-                        macros[ownerName].uses.push_back(usage);
+                        // resolvedTokens.insert({ownerName, tokenName});
+                        resolvedTokens.insert({ownerKeyStr, tokenName});
+                        macros[ownerKey].uses.push_back(usage); 
                         continue;
                     }
                 }
@@ -172,7 +215,7 @@ public:
                 usage.resolved = false;
                 usage.startLine = 0;
                 usage.endLine = 0;
-                macros[ownerName].uses.push_back(usage);
+                macros[ownerKey].uses.push_back(usage);
             }
         }
     }
@@ -369,7 +412,10 @@ public:
         std::string MacroName = MacroNameTok.getIdentifierInfo()->getName().str();
         const MacroInfo *MI = MD->getMacroInfo();
         
-        MacroSymbolInfo &info = Collector.macros[MacroName];
+        std::string defLocStr = Collector.getLocationString(Loc);
+        MacroCollector::MacroKey ownerKey{MacroName, defLocStr, UsesPattern{}};
+
+        MacroSymbolInfo &info = Collector.macros[ownerKey];
         info.name = MacroName;
         info.defLocation = Loc;
         
@@ -398,7 +444,7 @@ public:
                 info.kind = "macro"; //_object";
             }
             
-            Collector.collectMacroUses(MI, MacroName);
+            Collector.collectMacroUses(MI, ownerKey); 
         } else {
             info.kind = "macro"; //_object";
             info.defRange = SourceRange(Loc, Loc);
@@ -423,53 +469,68 @@ public:
                   const MacroDefinition &MD,
                   SourceRange Range,
                   const MacroArgs *Args) override {
-    const MacroInfo *MI = MD.getMacroInfo();
-    if (!MI) return;
-    
-    std::string macroName =
-        MacroNameTok.getIdentifierInfo()->getName().str();
-    
-    // Skip if this macro is not in the macros map
-    if (!Collector.macros.count(macroName)) return;
-    
-    for (const Token &Tok : MI->tokens()) {
-        if (!Tok.is(tok::identifier)) continue;
-        if (!Tok.getIdentifierInfo()) continue;
+        const MacroInfo *MI = MD.getMacroInfo();
+        if (!MI) return;
         
-        std::string tokenName =
-            Tok.getIdentifierInfo()->getName().str();
+        std::string macroName =
+            MacroNameTok.getIdentifierInfo()->getName().str();
         
-        // Skip if already resolved
-        auto key = std::make_pair(macroName, tokenName);
-        if (Collector.resolvedTokens.count(key)) continue;
+        std::string defLocStr =
+            Collector.getLocationString(MI->getDefinitionLoc());
         
-        IdentifierInfo *II = Collector.PP->getIdentifierInfo(tokenName);
-        if (II && II->hasMacroDefinition()) {
-            MacroDefinition RefMD = Collector.PP->getMacroDefinition(II);
-            if (RefMD && RefMD.getMacroInfo()) {
-                const MacroInfo *RefMI = RefMD.getMacroInfo();
-                
-                for (auto &u : Collector.macros[macroName].uses) {
-                    if (u.name == tokenName && !u.resolved) {
-                        u.kind = RefMI->isFunctionLike()
-                            ? "macro_function" : "macro";
-                        u.defLoc = RefMI->getDefinitionLoc();
-                        PresumedLoc sl = Collector.SM->getPresumedLoc(
-                            RefMI->getDefinitionLoc());
-                        PresumedLoc el = Collector.SM->getPresumedLoc(
-                            RefMI->getDefinitionEndLoc());
-                        u.startLine = sl.isValid() ? sl.getLine() : 0;
-                        u.endLine = el.isValid() ? el.getLine() : 0;
-                        u.resolved = true;
-                        break;
+        MacroCollector::MacroKey *targetKey = nullptr;
+        for (auto &kv : Collector.macros) {
+            if (kv.first.name == macroName &&
+                kv.first.defLocStr == defLocStr) {
+                targetKey = const_cast<MacroCollector::MacroKey *>(&kv.first);
+                break;
+            }
+        }
+        if (!targetKey) return;
+
+        std::string ownerKeyStr = MacroCollector::makeOwnerKeyStr(*targetKey);
+    
+        // Skip if this macro is not in the macros map
+        // if (!Collector.macros.count(macroName)) return;
+        
+        for (const Token &Tok : MI->tokens()) {
+            if (!Tok.is(tok::identifier)) continue;
+            if (!Tok.getIdentifierInfo()) continue;
+            
+            std::string tokenName =
+                Tok.getIdentifierInfo()->getName().str();
+            
+            // Skip if already resolved
+            auto key = std::make_pair(ownerKeyStr, tokenName);
+            if (Collector.resolvedTokens.count(key)) continue;
+            
+            IdentifierInfo *II = Collector.PP->getIdentifierInfo(tokenName);
+            if (II && II->hasMacroDefinition()) {
+                MacroDefinition RefMD = Collector.PP->getMacroDefinition(II);
+                if (RefMD && RefMD.getMacroInfo()) {
+                    const MacroInfo *RefMI = RefMD.getMacroInfo();
+                    
+                    for (auto &u : Collector.macros[*targetKey].uses) {
+                        if (u.name == tokenName && !u.resolved) {
+                            u.kind = RefMI->isFunctionLike()
+                                ? "macro_function" : "macro";
+                            u.defLoc = RefMI->getDefinitionLoc();
+                            PresumedLoc sl = Collector.SM->getPresumedLoc(
+                                RefMI->getDefinitionLoc());
+                            PresumedLoc el = Collector.SM->getPresumedLoc(
+                                RefMI->getDefinitionEndLoc());
+                            u.startLine = sl.isValid() ? sl.getLine() : 0;
+                            u.endLine = el.isValid() ? el.getLine() : 0;
+                            u.resolved = true;
+                            break;
+                        }
                     }
+                    
+                    Collector.resolvedTokens.insert(key);
                 }
-                
-                Collector.resolvedTokens.insert(key);
             }
         }
     }
-}
 };
 
 class CombinedASTConsumer : public ASTConsumer {
@@ -585,33 +646,61 @@ protected:
     
     void EndSourceFileAction() override {
         // Case 3: Resolve unresolved items using fallback
-        for (auto &[name, info] : Collector->macros) {
-            for (auto &u : info.uses) {
-                if (u.resolved) continue;
-                
-                if (Collector->macros.count(u.name)) {
-                    const auto &ref = Collector->macros[u.name];
+        for (auto &[key, info] : Collector->macros) {          
+        for (auto &u : info.uses) {
+            if (u.resolved) continue;
+            
+            bool found = false;
+            for (const auto &[refKey, ref] : Collector->macros) {
+                if (refKey.name == u.name) {
                     u.kind = ref.kind;
                     u.defLoc = ref.defLocation;
                     auto [sl, el] = Collector->getLineRange(ref.defRange);
                     u.startLine = sl;
                     u.endLine = el;
                     u.resolved = true;
-                } else if (Collector->symbols.count(u.name)) {
-                    const auto &ref = Collector->symbols[u.name];
-                    u.kind = ref.kind;
-                    u.defLoc = ref.defLocation;
-                    auto [sl, el] = Collector->getLineRange(ref.defRange);
-                    u.startLine = sl;
-                    u.endLine = el;
-                    u.resolved = true;
+                    found = true;
+                    break;
                 }
             }
+            if (!found && Collector->symbols.count(u.name)) {
+                const auto &ref = Collector->symbols[u.name];
+                u.kind = ref.kind;
+                u.defLoc = ref.defLocation;
+                auto [sl, el] = Collector->getLineRange(ref.defRange);
+                u.startLine = sl;
+                u.endLine = el;
+                u.resolved = true;
+            }
         }
+    }
+        // for (auto &[name, info] : Collector->macros) {
+        //     for (auto &u : info.uses) {
+        //         if (u.resolved) continue;
+                
+        //         if (Collector->macros.count(u.name)) {
+        //             const auto &ref = Collector->macros[u.name];
+        //             u.kind = ref.kind;
+        //             u.defLoc = ref.defLocation;
+        //             auto [sl, el] = Collector->getLineRange(ref.defRange);
+        //             u.startLine = sl;
+        //             u.endLine = el;
+        //             u.resolved = true;
+        //         } else if (Collector->symbols.count(u.name)) {
+        //             const auto &ref = Collector->symbols[u.name];
+        //             u.kind = ref.kind;
+        //             u.defLoc = ref.defLocation;
+        //             auto [sl, el] = Collector->getLineRange(ref.defRange);
+        //             u.startLine = sl;
+        //             u.endLine = el;
+        //             u.resolved = true;
+        //         }
+        //     }
+        // }
         
         // Convert to string (must be done before destroying Collector)
         if (g_batchMode) {
-            for (auto &[name, info] : Collector->macros) {
+            for (auto &[key, info] : Collector->macros) {
                 ResolvedMacro rm;
                 rm.defLocStr = Collector->getLocationString(info.defLocation);
                 rm.name = info.name;
@@ -709,7 +798,7 @@ protected:
         std::cout << "  \"macros\": [\n";
         
         bool first = true;
-        for (const auto &[name, info] : Collector->macros) {
+        for (const auto &[key, info] : Collector->macros) {
             if (!first) {
                 std::cout << ",\n";
             }
