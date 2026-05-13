@@ -1,3 +1,4 @@
+// macro_finder.cpp
 #include <filesystem> 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -442,20 +443,6 @@ public:
   void If(SourceLocation Loc, SourceRange ConditionRange,
     ConditionValueKind ConditionValue,
     ArrayRef<Token> UnexpandedTokens) override {
-
-    // llvm::errs() << "DEBUG: Collected " << UnexpandedTokens.size() << " tokens:\n";
-    // for (const Token &Tok : UnexpandedTokens) {
-    //   llvm::errs() << "  Kind: " << Tok.getName() << ", ";
-    //   if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()) {
-    //     llvm::errs() << "Identifier: " << Tok.getIdentifierInfo()->getName();
-    //   } else if (Tok.is(tok::raw_identifier)) {
-    //     llvm::errs() << "RawIdentifier: " << Tok.getRawIdentifier();
-    //   } else if (Tok.is(tok::numeric_constant)) {
-    //     llvm::errs() << "Numeric";
-    //   }
-    //   llvm::errs() << "\n";
-    // }
-    //
     
     // Get the end position of the condition expression
     SourceLocation ConditionEnd = Lexer::getLocForEndOfToken(
