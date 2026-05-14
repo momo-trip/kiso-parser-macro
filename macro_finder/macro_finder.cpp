@@ -1,4 +1,5 @@
 // macro_finder.cpp
+// grep -E "IdentifierInfo \*Ident_" /usr/lib/llvm-19/include/clang/Lex/Preprocessor.h
 #include <filesystem> 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -18,6 +19,7 @@ using namespace clang::tooling;
 using namespace llvm;
 
 static std::string g_compileDir;
+
 
 class MacroCallbacks : public PPCallbacks {
 public:
@@ -40,13 +42,6 @@ public:
 
   explicit MacroCallbacks(SourceManager &SM, Preprocessor &PP) : SM(SM), PP(PP) {}
 
-  // // Detect macro definitions
-  // void MacroDefined(const Token &MacroNameTok,
-  //                   const MacroDirective *MD) override {
-  //   SourceLocation Loc = MacroNameTok.getLocation();
-  //   printLocation("DEFINED", Loc, MacroNameTok.getIdentifierInfo()->getName());
-  // }
-
   // Detect macro definitions
   void MacroDefined(const Token &MacroNameTok,
                   const MacroDirective *MD) override {
@@ -58,29 +53,35 @@ public:
     
     const MacroInfo *MI = MD->getMacroInfo();
     
-    // ★ Get the macro definition body
-    std::string MacroBody;
-    if (MI && MI->getNumTokens() > 0) {
-      // Reconstruct definition body from token sequence
-      for (unsigned i = 0; i < MI->getNumTokens(); ++i) {
-        const Token &Tok = MI->getReplacementToken(i);
+    // Get the macro definition body directly from the source text.
+    // Using Lexer::getSourceText preserves the original spelling, including
+    // line continuations, escaped characters in string literals, and _Pragma.
+    std::string MacroBody = getMacroBodyFromSource(MI);
+
+
+    // // ★ Get the macro definition body
+    // std::string MacroBody;
+    // if (MI && MI->getNumTokens() > 0) {
+    //   // Reconstruct definition body from token sequence
+    //   for (unsigned i = 0; i < MI->getNumTokens(); ++i) {
+    //     const Token &Tok = MI->getReplacementToken(i);
         
-        // Handle spaces between tokens
-        if (i > 0 && Tok.hasLeadingSpace()) {
-          MacroBody += " ";
-        }
+    //     // Handle spaces between tokens
+    //     if (i > 0 && Tok.hasLeadingSpace()) {
+    //       MacroBody += " ";
+    //     }
         
-        // Get the text of the token
-        if (Tok.isLiteral()) {
-          MacroBody += StringRef(Tok.getLiteralData(), Tok.getLength()).str();
-        } else if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()) {
-          MacroBody += Tok.getIdentifierInfo()->getName().str();
-        } else {
-          // Other tokens (operators, etc.)
-          MacroBody += PP.getSpelling(Tok);
-        }
-      }
-    }
+    //     // Get the text of the token
+    //     if (Tok.isLiteral()) {
+    //       MacroBody += StringRef(Tok.getLiteralData(), Tok.getLength()).str();
+    //     } else if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()) {
+    //       MacroBody += Tok.getIdentifierInfo()->getName().str();
+    //     } else {
+    //       // Other tokens (operators, etc.)
+    //       MacroBody += PP.getSpelling(Tok);
+    //     }
+    //   }
+    // }
     
     if (MI && MI->isFunctionLike()) {
       std::string details;
@@ -460,7 +461,10 @@ public:
           continue;
         }
         
-        if (Name != "defined") {
+        // if (Name != "defined") {
+        //   Macros.insert(Name.str());
+        // }
+        if (!isPreprocessorOperator(Name)) { 
           Macros.insert(Name.str());
         }
       }
@@ -517,7 +521,10 @@ public:
           continue;
         }
         
-        if (Name != "defined") {
+        // if (Name != "defined") {
+        //   Macros.insert(Name.str());
+        // }
+        if (!isPreprocessorOperator(Name)) { 
           Macros.insert(Name.str());
         }
       }
@@ -554,7 +561,10 @@ public:
           continue;
         }
         
-        if (Name != "defined") {
+        // if (Name != "defined") {
+        //   Macros.insert(Name.str());
+        // }
+        if (!isPreprocessorOperator(Name)) { 
           Macros.insert(Name.str());
         }
       }
@@ -614,7 +624,10 @@ public:
           continue;
         }
         
-        if (Name != "defined") {
+        // if (Name != "defined") {
+        //   Macros.insert(Name.str());
+        // }
+        if (!isPreprocessorOperator(Name)) { 
           Macros.insert(Name.str());
         }
       }
@@ -1308,6 +1321,28 @@ private:
     return std::string(ParenStart, Ptr - ParenStart);
   }
 
+  // Extract the macro replacement body as it appears in the source.
+  // Returns an empty string for macros with no replacement tokens.
+  std::string getMacroBodyFromSource(const MacroInfo *MI) {
+    if (!MI || MI->getNumTokens() == 0) return "";
+    
+    // Start of the body: location of the first replacement token.
+    SourceLocation BodyBegin = MI->getReplacementToken(0).getLocation();
+    
+    // End of the body: end of the last replacement token.
+    SourceLocation BodyEnd = Lexer::getLocForEndOfToken(
+        MI->getDefinitionEndLoc(), 0, SM, PP.getLangOpts());
+    
+    if (BodyBegin.isInvalid() || BodyEnd.isInvalid()) return "";
+    
+    CharSourceRange Range = CharSourceRange::getCharRange(BodyBegin, BodyEnd);
+    bool Invalid = false;
+    StringRef Text = Lexer::getSourceText(Range, SM, PP.getLangOpts(), &Invalid);
+    
+    if (Invalid) return "";
+    return Text.str();
+  }
+
 
   // Get text from ConditionRange
   std::string getConditionText0(SourceRange ConditionRange) {
@@ -1370,6 +1405,24 @@ private:
   //   if (Invalid) return "";
   //   return Text.str();
   // }
+
+  static bool isPreprocessorOperator(llvm::StringRef name) {
+    static const std::set<llvm::StringRef> ops = {
+      "defined",
+      "__has_feature", "__has_extension",
+      "__has_builtin", "__has_constexpr_builtin",
+      "__has_attribute", "__has_embed",
+      "__has_include", "__has_include_next",
+      "__has_warning", "__is_identifier",
+      "__building_module",
+      "__has_cpp_attribute", "__has_c_attribute",
+      "__has_declspec",
+      "__is_target_arch", "__is_target_vendor",
+      "__is_target_os", "__is_target_environment",
+      "__is_target_variant_os", "__is_target_variant_environment",
+    };
+    return ops.count(name) > 0;
+  }
 };
 
 class MacroFinderAction : public PreprocessOnlyAction {
