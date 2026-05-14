@@ -18,6 +18,14 @@ add_definitions(${LLVM_DEFINITIONS})
 # Added: Disable RTTI
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 
+# Use Release build by default for performance
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Optimization flags
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
 add_executable(macro-finder macro_finder.cpp)
 
 llvm_map_components_to_libnames(llvm_libs 

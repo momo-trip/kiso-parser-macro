@@ -122,6 +122,24 @@ public:
     //     return p.lexically_normal().string();
     // }
 
+    // std::string getAbsolutePath(StringRef filename) {
+    //     // added: return virtual paths such as <built-in> and <command line> as-is
+    //     std::string name = filename.str();
+    //     if (!name.empty() && name[0] == '<') {
+    //         if (!g_compileDir.empty()) {
+    //             return g_compileDir + "/" + name;
+    //         }
+    //         return name;
+    //     }
+    //     // ended
+    //     std::filesystem::path p(name);
+    //     std::error_code ec;
+    //     if (!p.is_absolute()) {
+    //         p = std::filesystem::absolute(p, ec);
+    //     }
+    //     return p.lexically_normal().string();
+    // }
+
     std::string getAbsolutePath(StringRef filename) {
         // added: return virtual paths such as <built-in> and <command line> as-is
         std::string name = filename.str();
@@ -133,7 +151,15 @@ public:
         }
         // ended
         std::filesystem::path p(name);
+
+        // Resolve symbolic links to obtain the physical path
         std::error_code ec;
+        auto canonical = std::filesystem::canonical(p, ec);
+        if (!ec) {
+            return canonical.string();
+        }
+
+        // Fallback when canonical() fails (e.g., file does not exist)
         if (!p.is_absolute()) {
             p = std::filesystem::absolute(p, ec);
         }

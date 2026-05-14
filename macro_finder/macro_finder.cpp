@@ -13,6 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <set>
 #include <map>
+#include <unordered_map>
 
 using namespace clang;
 using namespace clang::tooling;
@@ -1260,28 +1261,46 @@ private:
   //   return normalized.string();
   // }
 
+  // Cache for getAbsolutePath results to avoid repeated filesystem calls.
+  std::unordered_map<std::string, std::string> pathCache;
+
   std::string getAbsolutePath(StringRef filename) {
-    // added: Return virtual paths like <built-in>, <command line> as-is
     std::string name = filename.str();
+
+    // Check cache first
+    auto it = pathCache.find(name);
+    if (it != pathCache.end()) {
+      return it->second;
+    }
+
+    std::string result;
+
+    // added: Return virtual paths like <built-in>, <command line> as-is
     if (!name.empty() && name[0] == '<') {
       if (!g_compileDir.empty()) {
-        return g_compileDir + "/" + name;
+        result = g_compileDir + "/" + name;
+      } else {
+        result = name;
       }
-      return name;
+      pathCache.emplace(name, result);
+      return result;
     }
     // ended
+
     std::filesystem::path p(name);
-    
+
     std::error_code EC;
-    auto result = std::filesystem::canonical(p, EC);
+    auto canonical = std::filesystem::canonical(p, EC);
     if (!EC) {
-      return result.string();
+      result = canonical.string();
+      pathCache.emplace(name, result);
+      return result;
     }
-    
+
     if (!p.is_absolute()) {
       p = std::filesystem::absolute(p);
     }
-    
+
     std::filesystem::path normalized;
     for (const auto& part : p) {
       if (part == "..") {
@@ -1292,9 +1311,47 @@ private:
         normalized /= part;
       }
     }
-    
-    return normalized.string();
+
+    result = normalized.string();
+    pathCache.emplace(name, result);
+    return result;
   }
+
+  // std::string getAbsolutePath(StringRef filename) {
+  //   // added: Return virtual paths like <built-in>, <command line> as-is
+  //   std::string name = filename.str();
+  //   if (!name.empty() && name[0] == '<') {
+  //     if (!g_compileDir.empty()) {
+  //       return g_compileDir + "/" + name;
+  //     }
+  //     return name;
+  //   }
+  //   // ended
+  //   std::filesystem::path p(name);
+    
+  //   std::error_code EC;
+  //   auto result = std::filesystem::canonical(p, EC);
+  //   if (!EC) {
+  //     return result.string();
+  //   }
+    
+  //   if (!p.is_absolute()) {
+  //     p = std::filesystem::absolute(p);
+  //   }
+    
+  //   std::filesystem::path normalized;
+  //   for (const auto& part : p) {
+  //     if (part == "..") {
+  //       if (normalized.has_parent_path() && normalized.filename() != "..") {
+  //         normalized = normalized.parent_path();
+  //       }
+  //     } else if (part != ".") {
+  //       normalized /= part;
+  //     }
+  //   }
+    
+  //   return normalized.string();
+  // }
 
   // Added near getAbsolutePath
   std::string getSignatureFromSource(const MacroInfo *MI) {
@@ -1520,12 +1577,17 @@ void addCustomIncludePaths(ClangTool &Tool) {
       CommonArgs.push_back("-isystem/usr/include");
 
       NewArgs.insert(NewArgs.begin() + 1, CommonArgs.begin(), CommonArgs.end());
+
       return NewArgs;
     }
   );
 }
 
 int main(int argc, const char **argv) {
+  // Enable buffering on llvm::outs() to reduce I/O overhead.
+  // The buffer is flushed automatically on normal program exit.
+  llvm::outs().SetBufferSize(65536);
+
   std::string dbPath;
   bool hasDBPath = false;
   
