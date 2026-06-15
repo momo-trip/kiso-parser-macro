@@ -22,6 +22,7 @@ using namespace llvm;
 static std::string g_compileDir;
 
 
+
 class MacroCallbacks : public PPCallbacks {
 public:
   // Struct to hold information about #if-family directives
@@ -41,7 +42,8 @@ public:
     bool hasElse = false;
   };
 
-  explicit MacroCallbacks(SourceManager &SM, Preprocessor &PP) : SM(SM), PP(PP) {}
+  explicit MacroCallbacks(SourceManager &SM, Preprocessor &PP)
+      : SM(SM), PP(PP) {}
 
   // Detect macro definitions
   void MacroDefined(const Token &MacroNameTok,
@@ -140,43 +142,6 @@ public:
     }
   }
 
-  // void MacroDefined(const Token &MacroNameTok,
-  //                   const MacroDirective *MD) override {
-  //   SourceLocation Loc = MacroNameTok.getLocation();
-  //   std::string MacroName = MacroNameTok.getIdentifierInfo()->getName().str();
-    
-  //   // Get the end position of the macro name
-  //   SourceLocation MacroEnd = Lexer::getLocForEndOfToken(
-  //     MacroNameTok.getLocation(), 0, SM, PP.getLangOpts());
-    
-  //   // Get MacroInfo and check if it's function-like
-  //   const MacroInfo *MI = MD->getMacroInfo();
-    
-  //   if (MI && MI->isFunctionLike()) {
-  //     // For function-like macros: with detailed information
-  //     std::string details = MacroName + "(";
-      
-  //     // Get parameter names
-  //     for (unsigned i = 0; i < MI->getNumParams(); ++i) {
-  //       if (i > 0) details += ", ";
-  //       details += MI->params()[i]->getName().str();
-  //     }
-      
-  //     // For variadic arguments
-  //     if (MI->isVariadic()) {
-  //       if (MI->getNumParams() > 0) details += ", ";
-  //       details += "...";
-  //     }
-      
-  //     details += ")";
-      
-  //     printLocationWithEnd("DEFINED_FUNC", Loc, MacroEnd, details);
-  //   } else {
-  //     // For macro variables (as before)
-  //     printLocationWithEnd("DEFINED", Loc, MacroEnd, MacroName);
-  //   }
-  // }
-
   // Detect macro definitions (within skipped blocks)
   void SkippedMacroDefined(const Token &MacroNameTok) override {
     SourceLocation Loc = MacroNameTok.getLocation();
@@ -215,17 +180,6 @@ public:
     }
   }
 
-  // // Detect #ifdef
-  // void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
-  //            const MacroDefinition &MD) override {
-  //   std::string MacroName = MacroNameTok.getIdentifierInfo()->getName().str();
-  //   std::string DefLoc = getDefinitionLocation(MD);
-  //   printLocationWithDef("IFDEF", Loc, MacroName, DefLoc);
-    
-  //   // Record the correspondence
-  //   ifStack.push_back({Loc, "IFDEF", MacroName});
-  // }
-
   // Detect #ifdef
   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
             const MacroDefinition &MD) override {
@@ -245,27 +199,6 @@ public:
     std::string MacroType = evaluated ? "IFDEF_TRUE" : "IFDEF_FALSE";
     //std::string MacroType = "IFDEF_TRUE";  // Always evaluated
     // ended
-
-    // if (MI && MI->isFunctionLike()) {
-    //   //MacroType = "IFDEF_FUNC";
-
-    //   // added
-    //   MacroType = evaluated ? "IFDEF_FUNC_TRUE" : "IFDEF_FUNC_FALSE";
-    //   //MacroType = "IFDEF_FUNC_TRUE";  // Function-like macros are also always evaluated
-    //   // ended
-      
-    //   // Add parameter information
-    //   MacroName += "(";
-    //   for (unsigned i = 0; i < MI->getNumParams(); ++i) {
-    //     if (i > 0) MacroName += ", ";
-    //     MacroName += MI->params()[i]->getName().str();
-    //   }
-    //   if (MI->isVariadic()) {
-    //     if (MI->getNumParams() > 0) MacroName += ", ";
-    //     MacroName += "...";
-    //   }
-    //   MacroName += ")";
-    // }
 
     if (MI && MI->isFunctionLike()) {
       MacroType = evaluated ? "IFDEF_FUNC_TRUE" : "IFDEF_FUNC_FALSE";
@@ -395,52 +328,6 @@ public:
 
     }
   }
-  // void SkippedIfndef(SourceLocation Loc, const Token &MacroNameTok) override {
-  //   if (MacroNameTok.getIdentifierInfo()) {
-  //     std::string MacroName = MacroNameTok.getIdentifierInfo()->getName().str();
-      
-  //     // Get the end position of the macro name
-  //     SourceLocation MacroEnd = Lexer::getLocForEndOfToken(
-  //       MacroNameTok.getLocation(), 0, SM, PP.getLangOpts());
-      
-  //     printLocationWithDefAndEnd("IFNDEF (skipped)", Loc, MacroEnd, MacroName, "unknown");
-  //   }
-  // }
-
-  // Detect #if (extract macros precisely using Lexer)
-  // void If(SourceLocation Loc, SourceRange ConditionRange,
-  //         ConditionValueKind ConditionValue) override {
-  //   std::set<std::string> Macros = extractMacrosUsingLexer(ConditionRange);
-  //   std::string CondText = getConditionText(ConditionRange);
-  //   printLocationWithMacros("IF", Loc, CondText, Macros);
-  // }
-
-  // // Detect #elif (extract macros precisely using Lexer)
-  // void Elif(SourceLocation Loc, SourceRange ConditionRange,
-  //           ConditionValueKind ConditionValue, SourceLocation IfLoc) override {
-  //   std::set<std::string> Macros = extractMacrosUsingLexer(ConditionRange);
-  //   std::string CondText = getConditionText(ConditionRange);
-  //   printLocationWithMacros("ELIF", Loc, CondText, Macros);
-  // }
-
-  // // Detect #if (using UnexpandedTokens)
-  // void If(SourceLocation Loc, SourceRange ConditionRange,
-  //   ConditionValueKind ConditionValue,
-  //   ArrayRef<Token> UnexpandedTokens) override { 
-
-  //   // Extract macros directly from tokens (no Lexer needed!)
-  //   std::set<std::string> Macros;
-  //   for (const Token &Tok : UnexpandedTokens) {
-  //     if (Tok.is(tok::identifier)) {
-  //       StringRef Name = Tok.getRawIdentifier();
-  //       if (Name != "defined") {
-  //         Macros.insert(Name.str());
-  //       }
-  //     }
-  //   }
-  //   std::string CondText = getConditionText(ConditionRange);
-  //   printLocationWithMacros("IF", Loc, CondText, Macros);
-  // }
 
   void If(SourceLocation Loc, SourceRange ConditionRange,
     ConditionValueKind ConditionValue,
@@ -694,7 +581,6 @@ public:
       //              << ":" << PLoc.getColumn()   // Same column
       //              << "\n";
 
-      // added
       // #else is executed = all previous #if/#elif were False
       llvm::outs() << "[ELSE_TRUE] "
                     << absPath 
@@ -703,29 +589,17 @@ public:
                     << ":" << PLoc.getLine()
                     << ":" << PLoc.getColumn()
                     << "\n";
-      // ended
     }
 
-    // added
     // Add to ifStack (for correspondence with #endif)
     PresumedLoc EndPLoc = SM.getPresumedLoc(Loc);
     //ifStack.push_back({Loc, "ELSE_TRUE", "", EndPLoc.getLine(), EndPLoc.getColumn()});
-    // ended
-    
-    // ★ Record the correspondence (optional)
-    // When updating the last element of ifStack
-    // if (!ifStack.empty()) {
-    //   ifStack.back().loc = Loc;  // Update to the position of #else
-    // }
 
-    // added
     if (!ifBlockStack.empty()) {
       PresumedLoc PLoc = SM.getPresumedLoc(Loc);
       ifBlockStack.back().elseDirective = {Loc, "ELSE_TRUE", "", PLoc.getLine(), PLoc.getColumn()};
       ifBlockStack.back().hasElse = true;
     }
-    // ended
-
   }
 
   void SkippedElse(SourceLocation Loc, SourceLocation IfLoc) override {
@@ -735,7 +609,6 @@ public:
     if (PLoc.isValid()) {
       std::string absPath = getAbsolutePath(PLoc.getFilename());
       
-      // added
       // Skipped #else = evaluated=False
       llvm::outs() << "[ELSE_FALSE] "
                     << absPath 
@@ -744,8 +617,7 @@ public:
                     << ":" << PLoc.getLine()
                     << ":" << PLoc.getColumn()
                     << "\n";
-      // ended
-      
+
       // llvm::outs() << "[ELSE (skipped)] " 
       //              << absPath 
       //              << ":" << PLoc.getLine() 
@@ -755,19 +627,11 @@ public:
       //              << "\n";
     }
 
-    // // added
-    // // Add to ifStack
-    // PresumedLoc EndPLoc = SM.getPresumedLoc(Loc);
-    // ifStack.push_back({Loc, "ELSE_FALSE", "", EndPLoc.getLine(), EndPLoc.getColumn()});
-    // // ended
-
-    // added
     if (!ifBlockStack.empty()) {
       PresumedLoc PLoc = SM.getPresumedLoc(Loc);
       ifBlockStack.back().elseDirective = {Loc, "ELSE_FALSE", "", PLoc.getLine(), PLoc.getColumn()};
       ifBlockStack.back().hasElse = true;
     }
-    // ended
     
   }
 
@@ -789,7 +653,6 @@ public:
     }
     
     // Search for the corresponding #if and output
-    // added
     if (!ifBlockStack.empty()) {
       auto &block = ifBlockStack.back();
       PresumedLoc EndifPLoc = SM.getPresumedLoc(Loc);
@@ -808,6 +671,7 @@ public:
               if (!ifInfo.info.empty()) {
                   llvm::outs() << " (" << ifInfo.info << ")";
               }
+
               llvm::outs() << "\n";
           }
       }
@@ -877,6 +741,7 @@ public:
   //   printLocation("ENDIF (skipped)", Loc, "");
   // }
   
+
   void SkippedEndif(SourceLocation Loc, SourceLocation IfLoc) override {
     // #endif is a single keyword, so start position = end position
     PresumedLoc PLoc = SM.getPresumedLoc(Loc);
@@ -938,6 +803,7 @@ public:
               if (!ifInfo.info.empty()) {
                   llvm::outs() << " (" << ifInfo.info << ")";
               }
+
               llvm::outs() << "\n";
           }
       }
@@ -955,6 +821,7 @@ public:
               if (!elifInfo.info.empty()) {
                   llvm::outs() << " (" << elifInfo.info << ")";
               }
+
               llvm::outs() << "\n";
           }
       }
@@ -987,7 +854,7 @@ public:
 private:
   SourceManager &SM;
   Preprocessor &PP;
-  
+
   // Stack for #if-family directives (supports nesting)
   //std::vector<IfDirectiveInfo> ifStack;
   std::vector<IfBlockInfo> ifBlockStack;  // added
@@ -1008,6 +875,7 @@ private:
                  << ":" << PLoc.getColumn();
     if (!Info.empty())
       llvm::outs() << " - " << Info;
+
     llvm::outs() << "\n";
   }
 
@@ -1029,6 +897,7 @@ private:
                  << ":" << EndPLoc.getColumn();  // End column
     if (!Info.empty())
       llvm::outs() << " - " << Info;
+
     llvm::outs() << "\n";
   }
 
@@ -1049,6 +918,7 @@ private:
                  << " - " << MacroName;
     if (!DefLoc.empty())
       llvm::outs() << " (defined at: " << DefLoc << ")";
+
     llvm::outs() << "\n";
   }
 
@@ -1072,6 +942,7 @@ private:
                  << " - " << MacroName;
     if (!DefLoc.empty())
       llvm::outs() << " (defined at: " << DefLoc << ")";
+
     llvm::outs() << "\n";
   }
 
@@ -1111,6 +982,7 @@ private:
       }
       llvm::outs() << "]";
     }
+
     llvm::outs() << "\n";
   }
 
@@ -1155,6 +1027,7 @@ private:
       }
       llvm::outs() << "]";
     }
+
     llvm::outs() << "\n";
   }
 
@@ -1317,41 +1190,6 @@ private:
     return result;
   }
 
-  // std::string getAbsolutePath(StringRef filename) {
-  //   // added: Return virtual paths like <built-in>, <command line> as-is
-  //   std::string name = filename.str();
-  //   if (!name.empty() && name[0] == '<') {
-  //     if (!g_compileDir.empty()) {
-  //       return g_compileDir + "/" + name;
-  //     }
-  //     return name;
-  //   }
-  //   // ended
-  //   std::filesystem::path p(name);
-    
-  //   std::error_code EC;
-  //   auto result = std::filesystem::canonical(p, EC);
-  //   if (!EC) {
-  //     return result.string();
-  //   }
-    
-  //   if (!p.is_absolute()) {
-  //     p = std::filesystem::absolute(p);
-  //   }
-    
-  //   std::filesystem::path normalized;
-  //   for (const auto& part : p) {
-  //     if (part == "..") {
-  //       if (normalized.has_parent_path() && normalized.filename() != "..") {
-  //         normalized = normalized.parent_path();
-  //       }
-  //     } else if (part != ".") {
-  //       normalized /= part;
-  //     }
-  //   }
-    
-  //   return normalized.string();
-  // }
 
   // Added near getAbsolutePath
   std::string getSignatureFromSource(const MacroInfo *MI) {
@@ -1485,14 +1323,23 @@ private:
 class MacroFinderAction : public PreprocessOnlyAction {
 protected:
   void ExecuteAction() override {
-    Preprocessor &PP = getCompilerInstance().getPreprocessor();
-
-    // PP.setRecordCondDirectiveLocs(true);
-
+    // added
+    CompilerInstance &CI = getCompilerInstance();
+    Preprocessor &PP = CI.getPreprocessor();
     PP.addPPCallbacks(std::make_unique<MacroCallbacks>(
-        getCompilerInstance().getSourceManager(), PP));
+        CI.getSourceManager(), PP));
     PreprocessOnlyAction::ExecuteAction();
+    // ended
   }
+//   void ExecuteAction() override {
+//     Preprocessor &PP = getCompilerInstance().getPreprocessor();
+
+//     // PP.setRecordCondDirectiveLocs(true);
+
+//     PP.addPPCallbacks(std::make_unique<MacroCallbacks>(
+//         getCompilerInstance().getSourceManager(), PP));
+//     PreprocessOnlyAction::ExecuteAction();
+//   }
 };
 
 
@@ -1501,26 +1348,12 @@ static cl::OptionCategory MyToolCategory("macro-finder options");
 // Unified include path addition (C/C++ switching)
 static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
   // Specify Clang's resource directory
-  //"-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
   "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
   // Disable all warnings
   "-w",
   "-Wno-incompatible-function-pointer-types", 
   "-Wno-incompatible-pointer-types",
-  // "-Wno-incompatible-pointer-types-discards-qualifiers",
-  //"-Wno-error", 
-  //"-Wno-everything",
-  
-  // Prioritize Clang's built-in headers
-  //"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
-  // ★★★ Add OpenMP headers ★★★
-  //"-isystem/usr/lib/llvm-14/lib/clang/14.0.0/include",
-  //"-isystem/usr/lib/llvm-19/lib/clang/19/include",
-  // C++ headers (before C headers)
-  // "-isystem/usr/include/c++/11",
-  // "-isystem/usr/include/aarch64-linux-gnu/c++/11",
-  // "-isystem/usr/include/c++/11/backward",
-  
+
   // C system headers (after C++ - so they can be found by #include_next)
   "-isystem/usr/include/aarch64-linux-gnu",
   "-isystem/usr/include",
@@ -1588,6 +1421,7 @@ int main(int argc, const char **argv) {
   // The buffer is flushed automatically on normal program exit.
   llvm::outs().SetBufferSize(65536);
 
+
   std::string dbPath;
   bool hasDBPath = false;
   
@@ -1602,7 +1436,7 @@ int main(int argc, const char **argv) {
   if (hasDBPath) {
     std::filesystem::path absDbPath = std::filesystem::absolute(dbPath);
     absDbPath = absDbPath.lexically_normal();
-    g_compileDir = absDbPath.string();  // added
+    g_compileDir = absDbPath.string();
 
     std::string errMsg;
     auto DB = CompilationDatabase::loadFromDirectory(absDbPath.string(), errMsg);
@@ -1611,23 +1445,62 @@ int main(int argc, const char **argv) {
                    << dbPath << "': " << errMsg << "\n";
       return 1;
     }
-    
-    std::vector<std::string> AllFiles = DB->getAllFiles();
-    if (AllFiles.empty()) {
-      llvm::errs() << "No files found in compilation database at '"
+
+    // added
+    // Run ClangTool once per compile command entry. The per-command
+    // identifier is fixed per iteration. Tool.run is synchronous,
+    // so the analysis inside always belongs to this command.
+    auto AllCommands = DB->getAllCompileCommands();
+    if (AllCommands.empty()) {
+      llvm::errs() << "No compile commands found in compilation database at '"
                    << dbPath << "'\n";
       return 1;
     }
-    
-    llvm::errs() << "Processing " << AllFiles.size()
-                 << " files from compilation database\n";
-    
-    ClangTool Tool(*DB, AllFiles);
-    addCustomIncludePaths(Tool);
-    
-    return Tool.run(newFrontendActionFactory<MacroFinderAction>().get());
+
+    llvm::errs() << "Processing " << AllCommands.size()
+                 << " compile commands from compilation database\n";
+
+    int finalRet = 0;
+    for (const auto &cmd : AllCommands) {
+
+      // Build a single-entry DB. Drop argv[0] (compiler path) and the input
+      // source file; FixedCompilationDatabase appends the source file (passed
+      // via ClangTool's source list) itself, so leaving it in would duplicate.
+      std::vector<std::string> args;
+      for (size_t i = 1; i < cmd.CommandLine.size(); ++i) {
+        const std::string &a = cmd.CommandLine[i];
+        if (a == "-o" && i + 1 < cmd.CommandLine.size()) {
+          args.push_back(a);
+          args.push_back(cmd.CommandLine[++i]);
+          continue;
+        }
+        if (!a.empty() && a[0] != '-') {
+          std::filesystem::path ap(a), fp(cmd.Filename);
+          auto ext = ap.extension();
+          bool isSource = ext == ".c"  || ext == ".cc" || ext == ".cpp" ||
+                          ext == ".cxx" || ext == ".C";
+          if (isSource &&
+              (ap.lexically_normal() == fp.lexically_normal() ||
+               ap.filename() == fp.filename())) {
+            continue;
+          }
+        }
+        args.push_back(a);
+      }
+
+      FixedCompilationDatabase singleDB(cmd.Directory, args);
+      ClangTool Tool(singleDB, {cmd.Filename});
+      addCustomIncludePaths(Tool);
+
+      int ret = Tool.run(newFrontendActionFactory<MacroFinderAction>().get());
+      if (ret != 0) finalRet = ret;
+    }
+
+    llvm::outs().flush();
+    return finalRet;
+    // ended
   }
-  
+
   // Legacy path: via CommonOptionsParser
   auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
   if (!ExpectedParser) {
@@ -1642,79 +1515,3 @@ int main(int argc, const char **argv) {
 
   return Tool.run(newFrontendActionFactory<MacroFinderAction>().get());
 }
-
-// static cl::OptionCategory MyToolCategory("macro-finder options");
-
-// int main(int argc, const char **argv) {
-//   auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
-//   if (!ExpectedParser) {
-//     // llvm::errs() << ExpectedParser.takeError();
-//     return 1;
-//   }
-//   CommonOptionsParser &OptionsParser = ExpectedParser.get();
-//   ClangTool Tool(OptionsParser.getCompilations(),
-//                  OptionsParser.getSourcePathList());
-  
-//   // Add include paths for custom-built Clang
-//   // Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
-//   //   {// Specify Clang's resource directory
-//   //   //"-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
-//   //   "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
-//   //   // Disable all warnings
-//   //   "-w",
-//   //   // Prioritize Clang's built-in headers
-//   //   //"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
-//   //   // ★★★ Add OpenMP headers ★★★
-//   //   //"-isystem/usr/lib/llvm-14/lib/clang/14.0.0/include",
-//   //   "-isystem/usr/lib/llvm-19/lib/clang/19/include",
-//   //   // C++ headers (before C headers)
-//   //   // "-isystem/usr/include/c++/11",
-//   //   // "-isystem/usr/include/aarch64-linux-gnu/c++/11",
-//   //   // "-isystem/usr/include/c++/11/backward",
-    
-//   //   // C system headers (after C++ - so they can be found by #include_next)
-//   //   "-isystem/usr/include/aarch64-linux-gnu",
-//   //   "-isystem/usr/include"},
-//   //   ArgumentInsertPosition::BEGIN));
-
-//   Tool.appendArgumentsAdjuster(
-//     [](const CommandLineArguments &Args, StringRef Filename) -> CommandLineArguments {
-//       CommandLineArguments NewArgs = Args;
-      
-//       if (Filename.ends_with(".c")) {
-//         std::vector<std::string> CArgs = {
-//           "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
-//           "-w",
-//           "-isystem/usr/lib/llvm-19/lib/clang/19/include",
-//           "-isystem/usr/include/aarch64-linux-gnu",
-//           "-isystem/usr/include",
-//         };
-//         NewArgs.insert(NewArgs.begin() + 1, CArgs.begin(), CArgs.end());
-//       } else {
-//         std::vector<std::string> CxxArgs = {
-//           "-resource-dir=/usr/lib/llvm-19/lib/clang/19",
-//           "-w",
-//           "-isystem/usr/lib/llvm-19/lib/clang/19/include",
-//           "-isystem/usr/include/c++/11",
-//           "-isystem/usr/include/aarch64-linux-gnu/c++/11",
-//           "-isystem/usr/include/c++/11/backward",
-//           "-isystem/usr/include/aarch64-linux-gnu",
-//           "-isystem/usr/include",
-//         };
-//         NewArgs.insert(NewArgs.end(), CxxArgs.begin(), CxxArgs.end());
-//       }
-      
-//       return NewArgs;
-//     }
-//   );
-
-//   return Tool.run(newFrontendActionFactory<MacroFinderAction>().get());
-// }
-
-
-// Tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
-//   {"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
-//    "-isystem/usr/include",
-//    "-isystem/usr/include/aarch64-linux-gnu",
-//   "-isystem/usr/lib/gcc/aarch64-linux-gnu/11/include"},
-//   ArgumentInsertPosition::BEGIN));

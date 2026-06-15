@@ -26,6 +26,7 @@ using namespace llvm;
 
 static std::string g_compileDir;
 
+
 struct SymbolInfo {
     std::string kind;
     SourceLocation defLocation;
@@ -43,6 +44,7 @@ struct UsageLocation {
     unsigned startLine;
     unsigned endLine;
     bool resolved = false;
+
 };
 
 struct UsesPatternEntry {
@@ -112,33 +114,6 @@ public:
         if (Loc.isInvalid()) return true;
         return SM->isInSystemHeader(Loc);
     }
-    
-    // std::string getAbsolutePath(StringRef filename) {
-    //     std::filesystem::path p(filename.str());
-    //     std::error_code ec;
-    //     if (!p.is_absolute()) {
-    //         p = std::filesystem::absolute(p, ec);
-    //     }
-    //     return p.lexically_normal().string();
-    // }
-
-    // std::string getAbsolutePath(StringRef filename) {
-    //     // added: return virtual paths such as <built-in> and <command line> as-is
-    //     std::string name = filename.str();
-    //     if (!name.empty() && name[0] == '<') {
-    //         if (!g_compileDir.empty()) {
-    //             return g_compileDir + "/" + name;
-    //         }
-    //         return name;
-    //     }
-    //     // ended
-    //     std::filesystem::path p(name);
-    //     std::error_code ec;
-    //     if (!p.is_absolute()) {
-    //         p = std::filesystem::absolute(p, ec);
-    //     }
-    //     return p.lexically_normal().string();
-    // }
 
     std::string getAbsolutePath(StringRef filename) {
         // added: return virtual paths such as <built-in> and <command line> as-is
@@ -250,94 +225,12 @@ public:
             }
         }
     }
-
-    // void collectMacroUses(const MacroInfo *MI, const std::string &ownerName) {
-    //     if (!MI) return;
-    //     std::set<std::string> paramNames;
-    //     if (MI->isFunctionLike()) {
-    //         for (const IdentifierInfo *Param : MI->params()) {
-    //             if (Param) paramNames.insert(Param->getName().str());
-    //         }
-    //     }
-        
-    //     for (const Token &Tok : MI->tokens()) {
-    //         if (Tok.is(tok::identifier) || Tok.is(tok::raw_identifier)) {
-    //             StringRef Name;
-    //             if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()) {
-    //                 Name = Tok.getIdentifierInfo()->getName();
-    //             } else if (Tok.is(tok::raw_identifier)) {
-    //                 Name = Tok.getRawIdentifier();
-    //             } else {
-    //                 continue;
-    //             }
-                
-    //             std::string tokenName = Name.str();
-                
-    //             if (paramNames.count(tokenName)) continue;
-                
-    //             UsageLocation usage;
-    //             usage.name = tokenName;
-    //             usage.useLoc = Tok.getLocation();
-    //             usage.kind = "unknown";
-    //             usage.startLine = 0;
-    //             usage.endLine = 0;
-    //             macros[ownerName].uses.push_back(usage);
-    //         }
-    //     }
-    // }
-
-    // void collectMacroUses(const MacroInfo *MI, const std::string &ownerName) {
-    //     if (!MI) return;
-    
-    //     for (const Token &Tok : MI->tokens()) {
-    //         if (Tok.is(tok::identifier) || Tok.is(tok::raw_identifier)) {
-    //             StringRef Name;
-    //             if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()) {
-    //                 Name = Tok.getIdentifierInfo()->getName();
-    //             } else if (Tok.is(tok::raw_identifier)) {
-    //                 Name = Tok.getRawIdentifier();
-    //             } else {
-    //                 continue;
-    //             }
-                
-    //             std::string tokenName = Name.str();
-    //             SourceLocation useLoc = Tok.getLocation();
-                
-    //             UsageLocation usage;
-    //             usage.name = tokenName;
-    //             usage.useLoc = useLoc;
-                
-    //             if (macros.count(tokenName)) {
-    //                 const auto &usedMacro = macros[tokenName];
-    //                 usage.kind = usedMacro.kind;
-    //                 usage.defLoc = usedMacro.defLocation;
-    //                 auto [sl, el] = getLineRange(usedMacro.defRange);
-    //                 usage.startLine = sl;
-    //                 usage.endLine = el;
-    //             } else if (symbols.count(tokenName)) {
-    //                 const auto &usedSymbol = symbols[tokenName];
-    //                 usage.kind = usedSymbol.kind;
-    //                 usage.defLoc = usedSymbol.defLocation;
-    //                 auto [sl, el] = getLineRange(usedSymbol.defRange);
-    //                 usage.startLine = sl;
-    //                 usage.endLine = el;
-    //             } else {
-    //                 usage.kind = "unknown";
-    //                 usage.defLoc = SourceLocation();
-    //                 usage.startLine = 0;
-    //                 usage.endLine = 0;
-    //             }
-                
-    //             macros[ownerName].uses.push_back(usage);
-    //         }
-    //     }
-    // }
 };
 
 class SymbolCollector : public RecursiveASTVisitor<SymbolCollector> {
 private:
     MacroCollector &Collector;
-    
+
 public:
     explicit SymbolCollector(MacroCollector &Collector) 
         : Collector(Collector) {}
@@ -433,9 +326,12 @@ class MacroCallbacks : public PPCallbacks {
 private:
     MacroCollector &Collector;
 
+
 public:
     explicit MacroCallbacks(MacroCollector &Collector) 
-        : Collector(Collector) {}
+        : Collector(Collector) {
+    }
+
 
     void MacroDefined(const Token &MacroNameTok, const MacroDirective *MD) override {
         SourceLocation Loc = MacroNameTok.getLocation();
@@ -531,32 +427,7 @@ public:
 
         std::string ownerKeyStr = MacroCollector::makeOwnerKeyStr(*targetKey);
 
-        
-        // const MacroInfo *MI = MD.getMacroInfo();
-        // if (!MI) return;
-        
-        // std::string macroName =
-        //     MacroNameTok.getIdentifierInfo()->getName().str();
-        
-        // std::string defLocStr =
-        //     Collector.getLocationString(MI->getDefinitionLoc());
-        
-        // MacroCollector::MacroKey *targetKey = nullptr;
-        // for (auto &kv : Collector.macros) {
-        //     if (kv.first.name == macroName &&
-        //         kv.first.defLocStr == defLocStr) {
-        //         targetKey = const_cast<MacroCollector::MacroKey *>(&kv.first);
-        //         break;
-        //     }
-        // }
-        // if (!targetKey) return;
-
-        // std::string ownerKeyStr = MacroCollector::makeOwnerKeyStr(*targetKey);
-    
-
-        // Skip if this macro is not in the macros map
-        // if (!Collector.macros.count(macroName)) return;
-        
+                
         for (const Token &Tok : MI->tokens()) {
             if (!Tok.is(tok::identifier)) continue;
             if (!Tok.getIdentifierInfo()) continue;
@@ -586,6 +457,8 @@ public:
                             u.startLine = sl.isValid() ? sl.getLine() : 0;
                             u.endLine = el.isValid() ? el.getLine() : 0;
                             u.resolved = true;
+
+
                             break;
                         }
                     }
@@ -702,42 +575,6 @@ protected:
         
         return std::make_unique<CombinedASTConsumer>(*Collector);
     }
-    
-    // void EndSourceFileAction() override {
-    //     outputJSON();
-    //     delete Collector;
-    // }
-    
-    // void EndSourceFileAction() override {
-    //     // Case 3: Resolve unresolved items using fallback
-    //     for (auto &[key, info] : Collector->macros) {          
-    //         for (auto &u : info.uses) {
-    //             if (u.resolved) continue;
-                
-    //             bool found = false;
-    //             for (const auto &[refKey, ref] : Collector->macros) {
-    //                 if (refKey.name == u.name) {
-    //                     u.kind = ref.kind;
-    //                     u.defLoc = ref.defLocation;
-    //                     auto [sl, el] = Collector->getLineRange(ref.defRange);
-    //                     u.startLine = sl;
-    //                     u.endLine = el;
-    //                     u.resolved = true;
-    //                     found = true;
-    //                     break;
-    //                 }
-    //             }
-    //             if (!found && Collector->symbols.count(u.name)) {
-    //                 const auto &ref = Collector->symbols[u.name];
-    //                 u.kind = ref.kind;
-    //                 u.defLoc = ref.defLocation;
-    //                 auto [sl, el] = Collector->getLineRange(ref.defRange);
-    //                 u.startLine = sl;
-    //                 u.endLine = el;
-    //                 u.resolved = true;
-    //             }
-    //         }
-    //     }
 
     void EndSourceFileAction() override {
         // Build a name index once (eliminate linear scan)
@@ -777,30 +614,6 @@ protected:
                 }
             }
         }
-
-        // for (auto &[name, info] : Collector->macros) {
-        //     for (auto &u : info.uses) {
-        //         if (u.resolved) continue;
-                
-        //         if (Collector->macros.count(u.name)) {
-        //             const auto &ref = Collector->macros[u.name];
-        //             u.kind = ref.kind;
-        //             u.defLoc = ref.defLocation;
-        //             auto [sl, el] = Collector->getLineRange(ref.defRange);
-        //             u.startLine = sl;
-        //             u.endLine = el;
-        //             u.resolved = true;
-        //         } else if (Collector->symbols.count(u.name)) {
-        //             const auto &ref = Collector->symbols[u.name];
-        //             u.kind = ref.kind;
-        //             u.defLoc = ref.defLocation;
-        //             auto [sl, el] = Collector->getLineRange(ref.defRange);
-        //             u.startLine = sl;
-        //             u.endLine = el;
-        //             u.resolved = true;
-        //         }
-        //     }
-        // }
         
         // Convert to string (must be done before destroying Collector)
         if (g_batchMode) {
@@ -826,76 +639,6 @@ protected:
         
         delete Collector;
     }
-
-    // void EndSourceFileAction() override {
-    //     for (auto &[name, info] : Collector->macros) {
-    //         for (auto &u : info.uses) {
-    //             if (Collector->macros.count(u.name)) {
-    //                 const auto &ref = Collector->macros[u.name];
-    //                 u.kind = ref.kind;
-    //                 u.defLoc = ref.defLocation;
-    //                 auto [sl, el] = Collector->getLineRange(ref.defRange);
-    //                 u.startLine = sl;
-    //                 u.endLine = el;
-    //             } else if (Collector->symbols.count(u.name)) {
-    //                 const auto &ref = Collector->symbols[u.name];
-    //                 u.kind = ref.kind;
-    //                 u.defLoc = ref.defLocation;
-    //                 auto [sl, el] = Collector->getLineRange(ref.defRange);
-    //                 u.startLine = sl;
-    //                 u.endLine = el;
-    //             } else {
-    //                 u.kind = "unknown";
-    //             }
-    //         }
-    //     }
-    
-    //     if (g_batchMode) {
-    //         for (auto &[name, info] : Collector->macros) {
-    //             ResolvedMacro rm;
-    //             rm.defLocStr = Collector->getLocationString(info.defLocation);
-    //             rm.name = info.name;
-    //             rm.kind = info.kind;
-    //             rm.parameters = info.parameters;
-    //             auto [sl, el] = Collector->getLineRange(info.defRange);
-    //             rm.startLine = sl;
-    //             rm.endLine = el;
-    //             for (auto &u : info.uses) {
-    //                 u.useLocStr = Collector->getLocationString(u.useLoc);
-    //                 u.defLocStr = Collector->getLocationString(u.defLoc);
-    //             }
-    //             rm.uses = info.uses;
-    //             g_allMacros.push_back(std::move(rm));
-    //         }
-    //     } else {
-    //         outputJSON();
-    //     }
-    //     delete Collector;
-    // }
-
-    // void EndSourceFileAction0() override {
-    //     if (g_batchMode) {
-    //         for (auto &[name, info] : Collector->macros) {
-    //             ResolvedMacro rm;
-    //             rm.defLocStr = Collector->getLocationString(info.defLocation);
-    //             rm.name = info.name;
-    //             rm.kind = info.kind;
-    //             rm.parameters = info.parameters;
-    //             auto [sl, el] = Collector->getLineRange(info.defRange);
-    //             rm.startLine = sl;
-    //             rm.endLine = el;
-    //             for (auto &u : info.uses) {
-    //                 u.useLocStr = Collector->getLocationString(u.useLoc);
-    //                 u.defLocStr = Collector->getLocationString(u.defLoc);
-    //             }
-    //             rm.uses = info.uses;
-    //             g_allMacros.push_back(std::move(rm));
-    //         }
-    //     } else {
-    //         outputJSON();
-    //     }
-    //     delete Collector;
-    // }
     
     void outputJSON() {
         std::cout << "{\n";
@@ -947,8 +690,8 @@ protected:
                 std::cout << "          \"definition\": \"" 
                           << Collector->getLocationString(usage.defLoc) << "\",\n";
                 std::cout << "          \"start_line\": " << usage.startLine << ",\n";
-                std::cout << "          \"end_line\": " << usage.endLine << "\n";
-                std::cout << "        }";
+                std::cout << "          \"end_line\": " << usage.endLine;
+                std::cout << "\n";
             }
             
             std::cout << "\n      ]\n";
@@ -971,63 +714,12 @@ static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
     "-w",
     "-Wno-incompatible-function-pointer-types", 
     "-Wno-incompatible-pointer-types",
-    // "-Wno-incompatible-pointer-types-discards-qualifiers",
-    //"-Wno-error", 
-    //"-Wno-everything",
-    
-    // Prioritize Clang built-in headers
-    //"-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
-    // ★★★ Add OpenMP headers ★★★
-    //"-isystem/usr/lib/llvm-14/lib/clang/14.0.0/include",
-    //"-isystem/usr/lib/llvm-19/lib/clang/19/include",
-    // C++ headers (before C headers)
-    // "-isystem/usr/include/c++/11",
-    // "-isystem/usr/include/aarch64-linux-gnu/c++/11",
-    // "-isystem/usr/include/c++/11/backward",
-    
+
     // C system headers (after C++ so they can be found via #include_next)
     "-isystem/usr/include/aarch64-linux-gnu",
     "-isystem/usr/include",
-    
-    // Compiler settings
-    // "-std=gnu11",
-    // "-std=gnu++11",
     "-fno-strict-aliasing",
 };
-
-
-// static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
-//     "-resource-dir=/root/SmartC2Rust/macro/llvm-custom/lib/clang/19",
-//     "-w",
-//     "-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
-//     "-isystem/usr/include/c++/11",
-//     "-isystem/usr/include/aarch64-linux-gnu/c++/11",
-//     "-isystem/usr/include/c++/11/backward",
-//     "-isystem/usr/lib/gcc/aarch64-linux-gnu/11/include",
-//     "-isystem/usr/local/include",
-//     "-isystem/usr/include/aarch64-linux-gnu",
-//     "-isystem/usr/include",
-//     "-std=gnu11",
-//     "-fno-strict-aliasing",
-//     // "-Wno-error",
-//     // "-w"
-//     "-Wno-error=incompatible-function-pointer-types",
-//     "-Wno-error=atomic-alignment",
-//     // "-Wno-error=atomic-alignment",
-//     // "-Wno-error"
-// };
-
-// static const std::vector<std::string> CUSTOM_INCLUDE_PATHS = {
-//     "-isystem/root/SmartC2Rust/macro/llvm-custom/lib/clang/19/include",
-//     "-isystem/usr/include",
-//     "-isystem/usr/include/aarch64-linux-gnu",
-//     "-isystem/usr/lib/gcc/aarch64-linux-gnu/11/include",
-//     "-isystem/usr/include/c++/11",
-//     "-isystem/usr/include/aarch64-linux-gnu/c++/11",
-//     "-isystem/usr/include/c++/11/backward"
-// };
-
-
 
 
 void addCustomIncludePaths(ClangTool &Tool) {
@@ -1072,6 +764,8 @@ void addCustomIncludePaths0(ClangTool &Tool) {
 // #include "clang/Tooling/CompilationDatabase.h"  // ← It may already be included via Tooling.h. If not, add it.
 
 int main(int argc, const char **argv) {
+    
+    
     // Check whether the -p option is provided
     std::string dbPath;
     bool hasDBPath = false;
@@ -1156,43 +850,3 @@ int main(int argc, const char **argv) {
     return 1;
 }
 
-
-// int main(int argc, const char **argv) {
-//     if (argc >= 2 && std::string(argv[1]) != "-p") {
-//         std::vector<std::string> SourcePaths;
-//         SourcePaths.push_back(argv[1]);
-        
-//         std::vector<std::string> CompileCommands;
-//         bool afterDashes = false;
-//         for (int i = 2; i < argc; ++i) {
-//             if (std::string(argv[i]) == "--") {
-//                 afterDashes = true;
-//                 continue;
-//             }
-//             if (afterDashes) {
-//                 CompileCommands.push_back(argv[i]);
-//             }
-//         }
-        
-//         auto Compilations = std::make_unique<FixedCompilationDatabase>(
-//             ".", CompileCommands);
-        
-//         ClangTool Tool(*Compilations, SourcePaths);
-//         addCustomIncludePaths(Tool);
-        
-//         return Tool.run(newFrontendActionFactory<MacroAnalyzerAction>().get());
-//     }
-    
-//     auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
-//     if (!ExpectedParser) {
-//         llvm::errs() << ExpectedParser.takeError();
-//         return 1;
-//     }
-//     CommonOptionsParser &OptionsParser = ExpectedParser.get();
-//     ClangTool Tool(OptionsParser.getCompilations(),
-//                    OptionsParser.getSourcePathList());
-    
-//     addCustomIncludePaths(Tool);
-    
-//     return Tool.run(newFrontendActionFactory<MacroAnalyzerAction>().get());
-// }
