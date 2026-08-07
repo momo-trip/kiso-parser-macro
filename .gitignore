@@ -1,11 +1,19 @@
-llvm-project/
-llvm-custom/
+/macro_analyzer/
+/macro_finder/
+
+parsers/macro_analyzer*/build
+parsers/macro_finder*/build
 
 macro_finder*/build/
+macro_finder*/metadata/
+macro_finder*/output.json
+
 macro_analyzer*/build/
 strip_line*/build/
 pragma_finder*/build/
 tu_tracer*/build/
 
-macro_finder*/metadata/
-macro_finder*/output.json
+llvm-project/
+llvm-custom/
+
+update_parser.sh
