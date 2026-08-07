@@ -2,9 +2,16 @@ cmake_minimum_required(VERSION 3.13)
 project(MacroFinder)
 
 # Use custom-built version
-set(CMAKE_PREFIX_PATH "/root/kiso-parser-macro/llvm-custom")
-set(LLVM_DIR "/root/kiso-parser-macro/llvm-custom/lib/cmake/llvm")
-set(Clang_DIR "/root/kiso-parser-macro/llvm-custom/lib/cmake/clang")
+get_filename_component(LLVM_CUSTOM "${CMAKE_CURRENT_SOURCE_DIR}/../llvm-custom" ABSOLUTE)
+
+if(NOT EXISTS "${LLVM_CUSTOM}/lib/cmake/llvm")
+  message(FATAL_ERROR "llvm-custom not found at ${LLVM_CUSTOM}")
+endif()
+
+set(CMAKE_PREFIX_PATH "${LLVM_CUSTOM}")
+set(LLVM_DIR "${LLVM_CUSTOM}/lib/cmake/llvm")
+set(Clang_DIR "${LLVM_CUSTOM}/lib/cmake/clang")
+message(STATUS "Using LLVM at ${LLVM_DIR}")
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(Clang REQUIRED CONFIG)
