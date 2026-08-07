@@ -14,3 +14,5 @@ cmake -S llvm -B build -G Ninja \
   -DCMAKE_INSTALL_PREFIX=../llvm-custom
 cmake --build build --parallel 2
 cmake --install build
+
+cd ..
