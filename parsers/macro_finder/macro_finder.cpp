@@ -127,32 +127,89 @@ public:
     //   details += ")";
       
       // Also output the definition body
-      if (!MacroBody.empty()) {
-        details += " -> " + MacroBody;
-      }
-      
+      // if (!MacroBody.empty()) {
+      //   details += " -> " + MacroBody;
+      // }
+      details += " -> " + MacroBody;
+
       printLocationWithEnd("DEFINED_FUNC", Loc, MacroEnd, details);
     } else {
       // Also output the definition body for object-like macros
       std::string info = MacroName;
-      if (!MacroBody.empty()) {
-        info += " -> " + MacroBody;
-      }
+      // if (!MacroBody.empty()) {
+      //   info += " -> " + MacroBody;
+      // }
+
+      info += " -> " + MacroBody;
       printLocationWithEnd("DEFINED", Loc, MacroEnd, info);
     }
   }
 
-  // Detect macro definitions (within skipped blocks)
-  void SkippedMacroDefined(const Token &MacroNameTok) override {
-    SourceLocation Loc = MacroNameTok.getLocation();
-    if (MacroNameTok.getIdentifierInfo()) {  // null check
-      // Added null check
-      SourceLocation MacroEnd = Lexer::getLocForEndOfToken(
-        MacroNameTok.getLocation(), 0, SM, PP.getLangOpts());
+  // // Detect macro definitions (within skipped blocks)
+  // void SkippedMacroDefined(const Token &MacroNameTok) override {
+  //   SourceLocation Loc = MacroNameTok.getLocation();
+  //   if (MacroNameTok.getIdentifierInfo()) {  // null check
+  //     // Added null check
+  //     SourceLocation MacroEnd = Lexer::getLocForEndOfToken(
+  //       MacroNameTok.getLocation(), 0, SM, PP.getLangOpts());
       
-      printLocationWithEnd("DEFINED (skipped)", Loc, MacroEnd, 
-                          MacroNameTok.getIdentifierInfo()->getName());
+  //     printLocationWithEnd("DEFINED (skipped)", Loc, MacroEnd, 
+  //                         MacroNameTok.getIdentifierInfo()->getName());
+  //   }
+  // }
+  // Tokens after the macro name up to the end of the logical line (line
+  // continuations are joined and comments dropped by the lexer).
+  // The lexer starts at the beginning of the #define line, so that the
+  // start-of-line flag of the first token after the name is meaningful.
+  bool readSkippedDefine(SourceLocation NameEnd, bool &IsFunc,
+                         std::string &Params, std::string &Body) {
+    if (NameEnd.isInvalid() || !NameEnd.isFileID()) return false;
+    std::pair<FileID, unsigned> Pos = SM.getDecomposedLoc(NameEnd);
+    bool Invalid = false;
+    StringRef Buf = SM.getBufferData(Pos.first, &Invalid);
+    if (Invalid) return false;
+
+    unsigned Off = Pos.second;          // offset just after the macro name
+    unsigned LineStart = Off;
+    while (LineStart > 0 && Buf[LineStart - 1] != '\n') --LineStart;
+
+    Lexer Raw(SM.getLocForStartOfFile(Pos.first), PP.getLangOpts(),
+              Buf.begin(), Buf.begin() + LineStart, Buf.end());
+    Token Tok;
+    bool First = true, InParams = false;
+    IsFunc = false;
+    while (true) {
+      bool AtEnd = Raw.LexFromRawLexer(Tok);
+      if (Tok.is(tok::eof)) break;
+      // Skip "#", "define" and the macro name itself.
+      if (SM.getFileOffset(Tok.getLocation()) < Off) {
+        if (AtEnd) break;
+        continue;
+      }
+      // A token on a new line ends the definition (an empty body when this
+      // is the first token after the name).
+      if (Tok.isAtStartOfLine()) break;
+      std::string S = Lexer::getSpelling(Tok, SM, PP.getLangOpts());
+      if (First) {
+        First = false;
+        // "NAME(" with no space is a function-like macro.
+        if (Tok.is(tok::l_paren) && !Tok.hasLeadingSpace()) {
+          IsFunc = true;
+          InParams = true;
+          if (AtEnd) break;
+          continue;
+        }
+      }
+      if (InParams) {
+        if (Tok.is(tok::r_paren)) InParams = false;
+        else Params += S + (Tok.is(tok::comma) ? " " : "");
+      } else {
+        if (!Body.empty() && Tok.hasLeadingSpace()) Body += " ";
+        Body += S;
+      }
+      if (AtEnd) break;
     }
+    return true;
   }
 
   void MacroUndefined(const Token &MacroNameTok,
