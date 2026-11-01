@@ -8,3 +8,6 @@ cd ../..
 cd parsers/macro_finder && ./build.sh
 cd ../..
 
+cd pragma_finder && ./build.sh
+cd ..
+
